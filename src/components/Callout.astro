@@ -1,0 +1,35 @@
+---
+interface Props {
+  tone?: "describe" | "operate" | "publish" | "copper";
+  label?: string;
+}
+const { tone = "copper", label } = Astro.props;
+const accent = tone === "copper" ? "var(--copper)" : `var(--${tone})`;
+---
+<div class="callout" style={`--accent: ${accent}`}>
+  {label && <p class="callout-label">{label}</p>}
+  <div class="callout-body"><slot /></div>
+</div>
+
+<style>
+  .callout {
+    border: 1px solid var(--structural-dim);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    background: var(--canvas-primary);
+    padding: 16px 18px;
+    margin: 24px 0;
+    max-width: var(--content-max);
+  }
+  .callout-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  .callout-body :global(p) { color: var(--text-secondary); font-size: 15px; line-height: 1.6; margin: 0 0 10px; }
+  .callout-body :global(p:last-child) { margin-bottom: 0; }
+  .callout-body :global(code) { font-family: var(--mono); font-size: 12.5px; color: var(--copper-highlight); }
+</style>

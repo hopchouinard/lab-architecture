@@ -7,4 +7,8 @@ export const NAV: NavItem[] = [
   { key: "describe", label: "Describe", href: "/describe", group: "The three boundaries" },
   { key: "operate", label: "Operate", href: "/operate", group: "The three boundaries" },
   { key: "publish", label: "Publish", href: "/publish", group: "The three boundaries" },
+  { key: "governed-autonomy", label: "Governed Autonomy", href: "/governed-autonomy", group: "Deep dives" },
+  { key: "event-runtime", label: "Event Runtime", href: "/event-runtime", group: "Deep dives" },
+  { key: "single-source-of-truth", label: "Single Source of Truth", href: "/single-source-of-truth", group: "Deep dives" },
+  { key: "colophon", label: "Colophon", href: "/colophon" },
 ];

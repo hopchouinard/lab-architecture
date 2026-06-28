@@ -1,0 +1,14 @@
+---
+interface Props {
+  items: string[];
+}
+const { items } = Astro.props;
+---
+<div class="chips">
+  {items.map((c) => <span class="chip">{c}</span>)}
+</div>
+
+<style>
+  .chips { display: flex; gap: 9px; flex-wrap: wrap; margin: 14px 0; }
+  .chip { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); border: 1px solid var(--structural); border-radius: 6px; padding: 5px 11px; }
+</style>

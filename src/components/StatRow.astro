@@ -1,0 +1,17 @@
+---
+interface Props {
+  stats: { n: string; l: string }[];
+}
+const { stats } = Astro.props;
+---
+<div class="stats">
+  {stats.map((s) => (
+    <div class="stat"><div class="n">{s.n}</div><div class="l">{s.l}</div></div>
+  ))}
+</div>
+
+<style>
+  .stats { display: flex; gap: 46px; flex-wrap: wrap; margin: 8px 0; }
+  .stat .n { font-family: var(--serif); font-size: 40px; color: var(--copper); line-height: 1; }
+  .stat .l { font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-tertiary); margin-top: 6px; }
+</style>
