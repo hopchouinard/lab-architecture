@@ -1,0 +1,66 @@
+---
+import "@fontsource/instrument-serif/400.css";
+import "@fontsource/dm-sans/400.css";
+import "@fontsource/dm-sans/500.css";
+import "@fontsource/dm-mono/400.css";
+import "../styles/tokens.css";
+import { NAV } from "../data/nav.ts";
+
+interface Props { title: string; active: string; }
+const { title, active } = Astro.props;
+
+// group nav items, preserving order
+const groups: { name: string | null; items: typeof NAV }[] = [];
+for (const item of NAV) {
+  const name = item.group ?? null;
+  const last = groups[groups.length - 1];
+  if (last && last.name === name) last.items.push(item);
+  else groups.push({ name, items: [item] });
+}
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} — Patchoutech Architecture</title>
+    {/* Cloudflare Web Analytics is injected at the edge for the proxied Pages
+        domain — no third-party script tag ships in our source (no SRI surface). */}
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="side">
+        <a class="brand" href="/">
+          <span class="mk">◇</span><b>Patchoutech</b>
+        </a>
+        <p class="brand-sub">Architecture</p>
+        <nav>
+          {groups.map((g) => (
+            <div class="navgroup">
+              {g.name && <p class="navgroup-label">{g.name}</p>}
+              {g.items.map((item) => (
+                <a class={item.key === active ? "navlink on" : "navlink"} href={item.href}>{item.label}</a>
+              ))}
+            </div>
+          ))}
+        </nav>
+      </aside>
+      <main class="content">
+        <slot />
+      </main>
+    </div>
+    <style>
+      .shell { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+      .side { background: var(--canvas-deep); border-right: 1px solid var(--structural-dim); padding: 26px 20px; position: sticky; top: 0; height: 100vh; }
+      .brand { display: flex; align-items: center; gap: 9px; color: var(--text-primary); }
+      .brand .mk { color: var(--copper); font-size: 16px; }
+      .brand b { font-family: var(--serif); font-weight: 400; font-size: 19px; }
+      .brand-sub { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-tertiary); margin: 2px 0 24px 27px; }
+      .navgroup-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-tertiary); margin: 18px 0 7px 10px; }
+      .navlink { display: block; color: var(--text-secondary); padding: 7px 10px; border-radius: 7px; font-size: 14px; }
+      .navlink:hover { color: var(--text-primary); }
+      .navlink.on { background: var(--canvas-elevated); color: var(--copper-highlight); }
+      .content { padding: 56px 60px; max-width: calc(var(--content-max) + 120px); }
+    </style>
+  </body>
+</html>
