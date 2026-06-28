@@ -1,5 +1,6 @@
 ---
 import Layout from "./Layout.astro";
+import PageNav from "../components/PageNav.astro";
 
 interface Props {
   title: string;
@@ -15,6 +16,7 @@ const { title, active, kicker, headline, stand } = Astro.props;
   <h1 class="page-title">{headline}</h1>
   {stand && <p class="stand">{stand}</p>}
   <div class="prose"><slot /></div>
+  <PageNav active={active} />
 </Layout>
 
 <style>

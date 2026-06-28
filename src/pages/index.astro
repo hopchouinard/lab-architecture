@@ -1,5 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import PageNav from "../components/PageNav.astro";
 ---
 <Layout title="Overview" active="overview">
   <p class="kicker">Patchoutech · Architecture</p>
@@ -21,7 +22,8 @@ import Layout from "../layouts/Layout.astro";
     <div class="stat"><div class="n">0</div><div class="l">Secrets shipped</div></div>
   </div>
 
-  <p class="next">Start with <a href="/thesis">the thesis</a>, or open <a href="/explorer">the explorer</a>.</p>
+  <p class="next">Read it as a paper from here, or jump in and <a href="/explorer">open the explorer</a>.</p>
+  <PageNav active="overview" />
 </Layout>
 
 <style>

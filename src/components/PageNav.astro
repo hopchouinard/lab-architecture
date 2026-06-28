@@ -1,0 +1,48 @@
+---
+import { NAV } from "../data/nav.ts";
+
+interface Props {
+  active: string;
+}
+const { active } = Astro.props;
+
+// The linear reading order is the sidebar order minus the Explorer (an
+// interactive tool, not a step in the prose). Derived from NAV so it stays in
+// sync — add a page to NAV and it joins the reading flow automatically.
+const order = NAV.filter((i) => i.key !== "explorer");
+const idx = order.findIndex((i) => i.key === active);
+const prev = idx > 0 ? order[idx - 1] : null;
+const next = idx >= 0 && idx < order.length - 1 ? order[idx + 1] : null;
+const show = idx !== -1 && (prev || next);
+---
+{show && (
+  <nav class="pager" aria-label="Reading order">
+    <div class="slot">
+      {prev && (
+        <a class="pager-link" href={prev.href}>
+          <span class="pager-dir">← Previous</span>
+          <span class="pager-title">{prev.label}</span>
+        </a>
+      )}
+    </div>
+    <div class="slot right">
+      {next && (
+        <a class="pager-link next" href={next.href}>
+          <span class="pager-dir">Next →</span>
+          <span class="pager-title">{next.label}</span>
+        </a>
+      )}
+    </div>
+  </nav>
+)}
+
+<style>
+  .pager { display: flex; gap: 16px; margin: 56px 0 0; padding-top: 24px; border-top: 1px solid var(--structural-dim); max-width: var(--content-max); }
+  .slot { flex: 1; display: flex; }
+  .slot.right { justify-content: flex-end; }
+  .pager-link { display: flex; flex-direction: column; gap: 4px; text-decoration: none; padding: 12px 16px; border: 1px solid var(--structural-dim); border-radius: 10px; max-width: 280px; transition: border-color 0.15s ease, background 0.15s ease; }
+  .pager-link:hover { border-color: var(--copper-dim); background: var(--canvas-elevated); }
+  .pager-link.next { text-align: right; align-items: flex-end; }
+  .pager-dir { font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--copper); }
+  .pager-title { font-family: var(--serif); font-size: 19px; color: var(--text-primary); line-height: 1.2; }
+</style>
