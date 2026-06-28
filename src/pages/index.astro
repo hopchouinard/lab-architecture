@@ -1,17 +1,36 @@
 ---
-
+import Layout from "../layouts/Layout.astro";
 ---
+<Layout title="Overview" active="overview">
+  <p class="kicker">Patchoutech · Architecture</p>
+  <h1 class="hero">A home lab that operates itself — under a hard ceiling.</h1>
+  <p class="stand">Three boundaries, one source of truth, zero secrets shipped.</p>
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+  <p class="lede">
+    This is a white paper you can <em>explore</em>. The lab is split along a single seam:
+    one repository <em>describes</em> what exists, a second <em>operates</em> it under a
+    governed-autonomy model, and this site — the third boundary — <em>publishes</em> a
+    redacted projection anyone can read. Nothing sensitive is here, by construction.
+  </p>
+
+  <hr class="rule" />
+
+  <div class="stats">
+    <div class="stat"><div class="n">3</div><div class="l">Boundaries</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">Source of truth</div></div>
+    <div class="stat"><div class="n">0</div><div class="l">Secrets shipped</div></div>
+  </div>
+
+  <p class="next">Start with <a href="/thesis">the thesis</a>, or open <a href="/explorer">the explorer</a>.</p>
+</Layout>
+
+<style>
+  .hero { font-size: 44px; line-height: 1.1; margin: 10px 0 8px; max-width: 640px; }
+  .stand { font-family: var(--serif); font-style: italic; font-size: 21px; color: var(--text-tertiary); margin: 0 0 28px; }
+  .lede { color: var(--text-secondary); font-size: 17px; line-height: 1.7; max-width: var(--content-max); }
+  .rule { border: none; border-top: 1px solid var(--structural-dim); margin: 32px 0; max-width: var(--content-max); }
+  .stats { display: flex; gap: 46px; }
+  .stat .n { font-family: var(--serif); font-size: 42px; color: var(--copper); line-height: 1; }
+  .stat .l { font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-tertiary); margin-top: 6px; }
+  .next { color: var(--text-secondary); margin-top: 34px; }
+</style>
