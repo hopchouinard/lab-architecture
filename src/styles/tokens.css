@@ -1,0 +1,60 @@
+:root {
+  /* canvas */
+  --canvas-deep: #141210;
+  --canvas-primary: #1c1917;
+  --canvas-elevated: #231f1c;
+  --canvas-surface: #2a2522;
+  /* text */
+  --text-primary: #f5ede6;
+  --text-secondary: #bfb5aa;
+  --text-tertiary: #8a7f75;
+  /* copper */
+  --copper: #cf7e38;
+  --copper-bright: #e8943a;
+  --copper-highlight: #fac06a;
+  --copper-glow: #f2a94b;
+  --copper-dim: #7a4520;
+  /* boundary accents */
+  --describe: var(--copper);
+  --operate: #4ade80;
+  --publish: #60a5fa;
+  --reserved: #c084fc;
+  /* structure */
+  --structural: #4a4340;
+  --structural-dim: #3a3430;
+  --grid-line: rgba(255, 245, 235, 0.06);
+  /* type */
+  --serif: "Instrument Serif", Georgia, serif;
+  --sans: "DM Sans", system-ui, -apple-system, sans-serif;
+  --mono: "DM Mono", ui-monospace, Menlo, monospace;
+  /* layout */
+  --sidebar-w: 240px;
+  --content-max: 760px;
+}
+
+* { box-sizing: border-box; }
+
+html { color-scheme: dark; }
+
+body {
+  margin: 0;
+  background: var(--canvas-deep);
+  color: var(--text-primary);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--copper); text-decoration: none; }
+a:hover { color: var(--copper-highlight); }
+
+h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: 0.2px; }
+
+.kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--copper);
+}
