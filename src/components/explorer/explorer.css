@@ -1,0 +1,287 @@
+/* ── React Flow base styles ── */
+/* Imported here so Explorer.tsx only needs one CSS import */
+@import '@xyflow/react/dist/style.css';
+
+/* ── Island shell ── */
+.explorer-island {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--canvas-deep);
+  font-family: var(--sans);
+  overflow: hidden;
+}
+
+/* ── Top bar ── */
+.explorer-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--canvas-primary);
+  border-bottom: 1px solid var(--structural-dim);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+/* Layer toggle pill */
+.layer-toggle {
+  display: flex;
+  background: var(--canvas-deep);
+  border: 1px solid var(--structural-dim);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.layer-btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 16px;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+  line-height: 1;
+}
+
+.layer-btn:hover {
+  color: var(--text-primary);
+}
+
+.layer-btn.active {
+  background: var(--canvas-elevated);
+  color: var(--copper-highlight);
+}
+
+/* Search */
+.explorer-search {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--canvas-deep);
+  border: 1px solid var(--structural-dim);
+  border-radius: 7px;
+  color: var(--text-primary);
+  padding: 5px 12px;
+  outline: none;
+  width: 200px;
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+}
+
+.explorer-search:focus {
+  border-color: var(--copper-dim);
+}
+
+.explorer-search::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Remove the default "x" clear button in webkit */
+.explorer-search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+/* ── Canvas area ── */
+.explorer-canvas {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* RF component overrides for warm-charcoal dark theme */
+.explorer-canvas .react-flow {
+  background: var(--canvas-deep);
+}
+
+.explorer-canvas .react-flow__background {
+  background: var(--canvas-deep);
+}
+
+/* Zoom / fit-view controls */
+.explorer-canvas .react-flow__controls {
+  background: var(--canvas-elevated) !important;
+  border: 1px solid var(--structural-dim) !important;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.explorer-canvas .react-flow__controls-button {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--structural-dim) !important;
+  color: var(--text-secondary);
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.explorer-canvas .react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+.explorer-canvas .react-flow__controls-button:hover {
+  background: var(--canvas-surface) !important;
+}
+
+.explorer-canvas .react-flow__controls-button svg {
+  fill: var(--text-secondary);
+  width: 12px;
+  height: 12px;
+}
+
+.explorer-canvas .react-flow__controls-button:hover svg {
+  fill: var(--text-primary);
+}
+
+/* Edge paths */
+.explorer-canvas .react-flow__edge-path {
+  stroke: var(--structural);
+  stroke-width: 1.5;
+}
+
+.explorer-canvas .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--copper-dim);
+}
+
+/* ── Detail panel ── */
+.detail-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100%;
+  background: var(--canvas-elevated);
+  border-left: 1px solid var(--structural-dim);
+  padding: 20px 18px;
+  overflow-y: auto;
+  z-index: 20;
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+  box-sizing: border-box;
+}
+
+.detail-panel.open {
+  transform: translateX(0);
+}
+
+/* Close button */
+.detail-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 7px;
+  border-radius: 4px;
+  transition: color 0.12s, background 0.12s;
+}
+
+.detail-close:hover {
+  color: var(--text-primary);
+  background: var(--canvas-surface);
+}
+
+/* Panel content */
+.detail-kind {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+  line-height: 1;
+}
+
+.detail-label {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+}
+
+.detail-summary {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.detail-divider {
+  border: none;
+  border-top: 1px solid var(--structural-dim);
+  margin: 14px 0;
+}
+
+.detail-text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 1.65;
+  margin: 0 0 14px;
+}
+
+/* "Maps to" section */
+.detail-maps-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin: 0 0 8px;
+}
+
+.maps-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.chip {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--canvas-surface);
+  border: 1px solid var(--structural-dim);
+  border-radius: 5px;
+  padding: 4px 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.chip:hover {
+  border-color: var(--copper-dim);
+  color: var(--copper-highlight);
+}
+
+.maps-note {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  margin: 0;
+}
+
+/* Empty-state hint */
+.detail-hint {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 40px 0 0;
+  margin: 0;
+  line-height: 1.6;
+}

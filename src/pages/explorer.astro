@@ -1,17 +1,35 @@
 ---
-import ContentPage from "../layouts/ContentPage.astro";
+import Layout from "../layouts/Layout.astro";
+import Explorer from "../components/explorer/Explorer";
 ---
-<ContentPage
-  title="The Explorer"
-  active="explorer"
-  kicker="Interactive"
-  headline="The Explorer"
-  stand="A map of the architecture you can open."
->
-  <p>
-    The interactive explorer is being wired up. It will render the conceptual and physical
-    layers of the architecture as an explorable, zoomable graph — click any node for detail,
-    toggle between the <em>conceptual</em> and <em>physical</em> views, and trace how each
-    concept maps onto the real components that enforce it.
-  </p>
-</ContentPage>
+<Layout title="The Explorer" active="explorer">
+  <div class="explorer-host">
+    <Explorer client:only="react" />
+  </div>
+</Layout>
+
+<style is:global>
+  /*
+   * The explorer needs the full viewport area to the right of the sidebar.
+   * position: fixed + left: var(--sidebar-w) achieves this without
+   * modifying Layout.astro or its content-column max-width.
+   */
+  .explorer-host {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-w);
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+  }
+
+  /* React Flow requires the host chain to have explicit height */
+  .explorer-host > * {
+    height: 100%;
+  }
+
+  /* Prevent page scroll behind the fixed explorer */
+  body:has(.explorer-host) {
+    overflow: hidden;
+  }
+</style>
