@@ -224,9 +224,9 @@ export const PHYSICAL_NODES: GraphNode[] = [
     label: "VLAN segments",
     boundary: "physical",
     kind: "segmentation",
-    summary: "Seven role-based network zones.",
+    summary: "Role-based network zones.",
     detail:
-      "Traffic is split by role — core, management, services, DMZ, IoT, trusted, and backup — so each workload only sees what it should.",
+      "Traffic is split by role so each workload only sees what it should — management and service zones, with isolated zones for untrusted and backup traffic.",
     x: 0,
     y: 360,
   },

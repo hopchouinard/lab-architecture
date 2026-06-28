@@ -22,7 +22,7 @@ import Callout from "../components/Callout.astro";
 
   <p>
     Operate is built around an agent, not built for one. Today that agent is called Hermes.
-    Tomorrow it could be something else entirely — a different model, a different provider,
+    Tomorrow it could be something else entirely: a different model, a different provider,
     a different interface. The abstractions are vendor-neutral by intention: the authorization
     path, the capability registry, the audit trail, none of them reference a specific model
     or provider SDK. The agent makes requests; Operate decides what executes.
@@ -53,7 +53,7 @@ import Callout from "../components/Callout.astro";
   </p>
 
   <p>
-    Every attempt — approved, rejected, or pending human review — is written to an
+    Every attempt, whether approved, rejected, or pending human review, is written to an
     <strong>append-only audit trail</strong>. Nothing is elided. The record exists
     independent of outcome.
   </p>
@@ -64,7 +64,7 @@ import Callout from "../components/Callout.astro";
 
   <p>
     The two live wires in Operate are SSH access to the compute layer and the UniFi
-    management API. Both flow through the same governance surface — the same capability
+    management API. Both flow through the same governance surface: the same capability
     ceiling, the same approval policy, the same audit record. There is no side channel;
     every action taken on infrastructure is accounted for.
   </p>
@@ -72,7 +72,7 @@ import Callout from "../components/Callout.astro";
   <p>
     The inventory interface is a deliberately narrow seam. Operate reads the lab's physical
     and logical state from <code>inventory.yaml</code> through Describe's
-    <code>load_inventory()</code> entry point — the same function every other consumer uses.
+    <code>load_inventory()</code> entry point, the same function every other consumer uses.
     It does not maintain its own copy. It does not shadow or fork the data. One source of
     truth means one source of truth.
   </p>

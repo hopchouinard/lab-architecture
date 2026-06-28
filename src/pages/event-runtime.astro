@@ -26,7 +26,7 @@ import Chips from "../components/Chips.astro";
     specific role: a shared nervous system through which every component can speak and listen without
     knowing who else is in the room. The agent publishes. Source adapters publish. The audit trail
     subscribes. The bridge subscribes. None of them are coupled to each other directly. They are
-    coupled only to the subject namespace and the schema — the two contracts that give the system
+    coupled only to the subject namespace and the schema, the two contracts that give the system
     its coherence.
   </p>
 
@@ -63,7 +63,7 @@ import Chips from "../components/Chips.astro";
   </p>
 
   <p>
-    The <strong>bridge</strong> connects the runtime across topological boundaries — between the
+    The <strong>bridge</strong> connects the runtime across topological boundaries, between the
     operator layer and anything that lives outside it. Events that need to cross a boundary travel
     through the bridge, which handles the mechanics of that crossing without letting each side reach
     into the other's internals. The boundary stays hard; the information still flows.
@@ -95,8 +95,8 @@ import Chips from "../components/Chips.astro";
     <strong>Decoupling</strong> is real, not rhetorical. An agent that calls infrastructure
     directly, or a script that polls and acts in the same breath, creates invisible dependencies.
     The event backbone breaks that link. Source adapters translate real-world signals; consumers
-    subscribe to what they care about. Adding a new subscriber — a new check, a new alert, a new
-    archival hook — does not require touching the producer. The capability registry can still gate
+    subscribe to what they care about. Adding a new subscriber (a new check, a new alert, a new
+    archival hook) does not require touching the producer. The capability registry can still gate
     what the agent may do; the event runtime handles what it actually did.
   </p>
 
@@ -114,7 +114,7 @@ import Chips from "../components/Chips.astro";
       The event runtime does not sit beside the <a href="/governed-autonomy">governed-autonomy</a>
       machinery — it is woven through it. Every agent action that flows through the capability
       registry and RBAC policy also emits an event. The hard ceiling and the audit record are
-      enforced in the same transaction. Autonomy without a ledger is just automation; the event
+      enforced through the same governed path. Autonomy without a ledger is just automation; the event
       backbone is what makes the autonomy governable.
     </p>
   </Callout>
