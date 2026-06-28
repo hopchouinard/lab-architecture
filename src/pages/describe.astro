@@ -1,0 +1,109 @@
+---
+import ContentPage from "../layouts/ContentPage.astro";
+import PullQuote from "../components/PullQuote.astro";
+import Callout from "../components/Callout.astro";
+import StatRow from "../components/StatRow.astro";
+import Chips from "../components/Chips.astro";
+---
+<ContentPage
+  title="Describe"
+  active="describe"
+  kicker="Boundary I · Describe"
+  headline="One file. Everything else generated."
+  stand="The lab documents itself, and nothing is written twice."
+>
+  <p>
+    The Describe boundary is the most constrained of the three. It touches no infrastructure.
+    It holds no credentials. It does not deploy, configure, or change anything. What it does
+    is draw the shape of the lab with enough precision that every other boundary can reason
+    about it confidently — and then it enforces that shape so aggressively that the drawing
+    never drifts.
+  </p>
+
+  <h2>One file holds the facts</h2>
+
+  <p>
+    A single YAML file, <code>inventory.yaml</code>, is the canonical record of the lab:
+    every compute host, every network segment and VLAN, every service, every routing decision,
+    every known issue. Nothing else holds this data. If a host is added, it is added there.
+    If a service changes, the YAML changes. If something breaks in a documented way, the issue
+    is recorded there with an integer identifier and referenced by the artifacts that depend on it.
+  </p>
+
+  <p>
+    The file is the authoritative answer to "what does the lab look like right now?" — and the
+    rest of this boundary exists solely to render that answer into forms people and tools can
+    consume. There is no second database, no wiki table to keep in sync, no diagram someone
+    updates by hand after the fact.
+  </p>
+
+  <StatRow stats={[{ n: "1", l: "Source of truth" }, { n: "0", l: "Hand-written docs" }, { n: "3", l: "Generated views" }]} />
+
+  <h2>Generated views, not authored documents</h2>
+
+  <p>
+    Everything downstream of <code>inventory.yaml</code> is generated. Human-readable reference
+    documentation is produced by a renderer that walks the YAML and emits Markdown files — one
+    per host, one per logical grouping. The architecture diagram is a multi-frame Excalidraw
+    scene: an overview frame, one detail frame per compute host, a planned-state frame, and a
+    known-issues legend. All computed from the same source file, in the same pass, without
+    additional authoring.
+  </p>
+
+  <Callout tone="describe" label="Generated, not authored">
+    <p>
+      Neither the reference docs nor the diagram is a document someone wrote and maintains. They
+      are output. Authoring happens once — in <code>inventory.yaml</code> — and every downstream
+      artifact reflects it automatically. The principle has a corollary: anything you cannot
+      express in the YAML cannot be documented here.
+    </p>
+  </Callout>
+
+  <h2>A deterministic pipeline</h2>
+
+  <p>
+    The pipeline runs in three steps. <strong>Validate</strong> loads the YAML against its schema
+    and runs cross-field checks: dangling issue references, invalid cross-links, structural
+    constraints the schema alone cannot express. <strong>Render</strong> walks the validated data
+    and writes the reference Markdown. <strong>Diagram</strong> consumes the same data and emits
+    the full Excalidraw scene.
+  </p>
+
+  <Chips items={["validate", "render", "diagram"]} />
+
+  <p>
+    Determinism is not incidental here — it is a constraint. IDs and layout seeds are derived,
+    not random. Two runs on the same input produce byte-identical output. Generated files
+    therefore yield clean diffs: any change in the output corresponds exactly to a change in the
+    YAML, and nothing else. A commit that touches only generated files, with no upstream YAML
+    change, is a sign that something went wrong.
+  </p>
+
+  <PullQuote>Two runs, same input, byte-identical output.</PullQuote>
+
+  <h2>Coherence by construction</h2>
+
+  <p>
+    The hardest property to maintain in a documentation system is not accuracy at creation time;
+    it is coherence over time. Describe addresses this structurally rather than by convention.
+    Generated files carry a "GENERATED FROM inventory.yaml" header at the top. A coherence
+    checker enforces that every artifact has exactly one home and that no file has drifted outside
+    that expectation. Any hand-edit to a generated file is silently overwritten the next time
+    the pipeline runs. The rule is not something you might forget; it is a mechanism.
+  </p>
+
+  <p>
+    The result is a system where the question "is the documentation accurate?" collapses into a
+    simpler question: "is <code>inventory.yaml</code> accurate?" There is no delta to chase,
+    no stale copy to reconcile, no second source that might contradict the first.
+  </p>
+
+  <p>
+    Data flows outward from this boundary, not inward. The <a href="/operate">Operate</a> boundary
+    reads <code>inventory.yaml</code> through a defined entry point and never shadows or forks the
+    data. Describe does not receive writes from Operate directly — any update Operate makes flows
+    back through the same gated pipeline: validate, render, diagram, tests, commit. The
+    <a href="/single-source-of-truth">deep dive into the source of truth</a> unpacks the full
+    schema and what each section contains.
+  </p>
+</ContentPage>

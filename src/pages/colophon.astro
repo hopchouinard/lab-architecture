@@ -1,0 +1,107 @@
+---
+import ContentPage from "../layouts/ContentPage.astro";
+import Callout from "../components/Callout.astro";
+import Chips from "../components/Chips.astro";
+---
+<ContentPage
+  title="Colophon"
+  active="colophon"
+  kicker="Colophon"
+  headline="How this site is built."
+  stand="The publish boundary, practicing what it documents."
+>
+  <p>
+    This site is the third boundary in the lab's three-boundary model: it publishes a
+    redacted projection of the infrastructure that anyone can read, without exposing
+    anything the other two boundaries guard. That is not just a design goal. It is
+    enforced at build time, in two independent steps that must both pass before a build
+    can ship.
+  </p>
+
+  <h2>Built on its own principles</h2>
+
+  <p>
+    The physical-layer data visible in the <a href="/explorer">interactive explorer</a>
+    originates in the same <code>inventory.yaml</code> that serves as the single source
+    of truth in the <a href="/describe">Describe</a> boundary. It never crosses the
+    boundary raw. An allowlist projection runs first, emitting only the fields explicitly
+    marked as publishable. Everything else defaults to private. The projection is
+    fail-closed: an untagged field does not appear in the output; it is absent.
+  </p>
+
+  <Callout tone="publish" label="The tripwire">
+    <p>
+      An independent scan then runs over the compiled output looking for anything
+      secret-shaped: IP addresses, credential-like strings, host-specific identifiers.
+      If it finds a match, the build exits non-zero and the site does not ship. This is
+      not documentation of intent — it is a hard gate. The tripwire runs after the
+      allowlist projection, so even a bug in the projection cannot silently produce a
+      clean build. Both checks must pass. See <a href="/publish">Publish</a> for the
+      full boundary design.
+    </p>
+  </Callout>
+
+  <p>
+    The public build never receives <code>inventory.yaml</code> directly. By the time
+    the Astro compiler sees any lab data, it is pre-sanitized JSON that has already
+    cleared the allowlist projection and the tripwire. There is no code path in this
+    site that reads the source file.
+  </p>
+
+  <h2>The stack</h2>
+
+  <p>
+    The architecture is deliberately minimal. Astro 7 compiles the site to static HTML
+    at build time: no server process, no server-side rendering, no API routes. The pages
+    you are reading are Astro components — hand-authored prose, not generated output.
+  </p>
+
+  <p>
+    The one interactive piece is the infrastructure explorer, a React Flow island
+    client-hydrated from a sanitized JSON payload that is generated as part of the same
+    build pipeline. The island runs entirely in the browser and makes no requests to any
+    lab system. It is interactive in the UI sense; it is inert in the network sense.
+  </p>
+
+  <Chips items={["Astro 7", "React Flow", "allowlist export", "tripwire", "static HTML"]} />
+
+  <h2>The design system</h2>
+
+  <p>
+    Three typefaces carry the visual hierarchy. <strong>Instrument Serif</strong> handles
+    the display layer: page headlines, pull quotes, and the stand lines that open each
+    section. It is a high-contrast transitional serif that reads well at large sizes on
+    dark backgrounds. <strong>DM Sans</strong> handles body text and UI chrome — a
+    geometric grotesque that stays legible at small sizes without feeling clinical.
+    <strong>DM Mono</strong> renders labels, chips, code fragments, and nav group
+    headings: the data layer, where monospace signals precision.
+  </p>
+
+  <p>
+    The color story is copper on warm charcoal. Copper is used sparingly: active nav
+    states, accent borders on callouts, inline links, and numbers in stat displays.
+    Everything else recedes into a warm gray scale. The palette is dark by default,
+    not as a stylistic gesture but because the subject matter is infrastructure running
+    in a rack — not a product landing page in morning light.
+  </p>
+
+  <h2>What this site is not</h2>
+
+  <p>
+    The site carries no live data. Nothing it displays changes after the build runs.
+    There is no polling loop, no webhook listener, no cron job refreshing a feed from the
+    lab. The architecture diagram and the explorer reflect the state of
+    <code>inventory.yaml</code> at the moment the pipeline last ran and no later.
+  </p>
+
+  <p>
+    No path runs from this site back into the lab. There is no outbound API call, no
+    server-side handler, no form that submits to a lab system. The boundary between
+    Publish and the two boundaries behind it is strictly one-directional: data flows out
+    at build time, and that is the only crossing it makes.
+  </p>
+
+  <p>
+    The site cannot leak the lab's secrets. They were never compiled into it.
+  </p>
+</ContentPage>

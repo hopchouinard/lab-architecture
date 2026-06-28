@@ -1,0 +1,121 @@
+---
+import ContentPage from "../layouts/ContentPage.astro";
+import PullQuote from "../components/PullQuote.astro";
+import Callout from "../components/Callout.astro";
+import StatRow from "../components/StatRow.astro";
+---
+<ContentPage
+  title="Governed Autonomy"
+  active="governed-autonomy"
+  kicker="Deep dive"
+  headline="Allowed to act. Unable to overreach."
+  stand="Autonomy that is bounded in code, not in trust."
+>
+  <p>
+    The phrase "AI-operated infrastructure" tends to provoke one of two reactions: uncritical
+    enthusiasm, or categorical refusal. Both miss the engineering question, which is not
+    whether an agent should act, but <em>under what constraints</em> it is permitted to.
+    The <a href="/operate">Operate</a> layer is built around a specific answer to that
+    question: enumerate every permissible action explicitly, gate the consequential ones
+    behind human approval, and record everything without exception. The result is an agent
+    that is genuinely useful inside a ceiling it cannot exceed.
+  </p>
+
+  <h2>The capability registry: the outer bound</h2>
+
+  <p>
+    The first line of defense is structural. The <strong>capability registry</strong> is an
+    allowlist of every operation the agent may attempt — not a list of operations it is
+    encouraged to use, or operations that have been tested, but every operation it can
+    call, period. Anything absent from the registry is not blocked at runtime by a
+    policy check; it is simply uncallable. The agent has no mechanism to reach it.
+  </p>
+
+  <p>
+    This matters because it shifts the security boundary from runtime behavior to
+    code structure. An agent can misbehave at runtime in ways that are hard to anticipate;
+    it cannot invoke a function that does not exist in its surface area. The registry is
+    the outer perimeter, and it is enforced before policy runs, before approval is sought,
+    before any execution begins. The ceiling is not a rule the agent agrees to follow.
+  </p>
+
+  <PullQuote>The ceiling is not a rule the agent agrees to follow. It is a wall the agent cannot see past.</PullQuote>
+
+  <h2>RBAC and approval: the inner gates</h2>
+
+  <p>
+    Inside the registry, not all operations are equal. The <strong>RBAC and approval
+    policy</strong> divides the permitted surface into tiers. Routine, low-impact
+    operations — reading status, querying the inventory, checking metrics — run freely.
+    Consequential operations — anything that modifies infrastructure state, touches
+    credentials, or crosses a boundary with meaningful blast radius — require explicit
+    human approval before they execute.
+  </p>
+
+  <p>
+    The approval gate is not advisory. A pending action waits in a queue; it does not
+    proceed speculatively and roll back if declined. The agent proposes, states its
+    reasoning, and stops. A human decides. Only on approval does execution begin. This
+    keeps a human in the loop precisely where the loop matters, without burdening
+    every read-only query with ceremony.
+  </p>
+
+  <Callout tone="operate" label="Approval semantics">
+    <p>
+      The approval queue carries the proposed action, the capability it maps to, the
+      policy rule that triggered the gate, and the agent's stated intent. The human
+      approves or rejects the specific action as proposed — not a general capability,
+      not a class of operations. Scope creep between proposal and execution is not
+      possible by design.
+    </p>
+  </Callout>
+
+  <h2>The audit trail: immutable record</h2>
+
+  <p>
+    Every attempt is recorded. Every approval or rejection is recorded. Every execution
+    is recorded. The <strong>append-only audit trail</strong> captures the full chain for
+    every action: what was proposed, what policy applied, what the human decided, what
+    was executed, and what the outcome was. It cannot be edited; it can only grow.
+  </p>
+
+  <p>
+    The audit trail serves two purposes. Operationally, it is the post-hoc record that
+    makes autonomous action reviewable — not just "did something happen" but the full
+    provenance of why and how. Architecturally, it closes the loop: the system that
+    executes actions is the system that records them, with no gap between the two. Every
+    action that can happen is logged; every log entry corresponds to an action that was
+    permitted.
+  </p>
+
+  <h2>The chain in operation</h2>
+
+  <p>
+    The three components form a strict sequence. The registry defines what can happen.
+    Policy decides which of those things happen freely and which require a human
+    decision. The audit trail records what did happen. An action that clears all three
+    is one that was explicitly enumerated, explicitly permitted or approved, and
+    permanently recorded.
+  </p>
+
+  <StatRow stats={[
+    { n: "1", l: "Allowlist ceiling" },
+    { n: "2", l: "Policy tiers" },
+    { n: "∞", l: "Audit entries" }
+  ]} />
+
+  <p>
+    This is also how the <a href="/event-runtime">event runtime</a> fits in: it carries
+    what-happened as structured events downstream, so the audit record is not a siloed
+    log but a live signal the rest of the system can observe. Governed autonomy is not
+    a checkpoint at the end of a workflow; it is the operating model throughout.
+  </p>
+
+  <p>
+    The agent is useful because it can act without waiting for a human on every routine
+    query. It is safe because the consequential moves still require one. It is auditable
+    because every move, routine or consequential, is permanently recorded. The ceiling
+    is not negotiated at runtime. It is written in the registry, and the registry is
+    the code.
+  </p>
+</ContentPage>

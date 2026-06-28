@@ -1,0 +1,121 @@
+---
+import ContentPage from "../layouts/ContentPage.astro";
+import PullQuote from "../components/PullQuote.astro";
+import Callout from "../components/Callout.astro";
+import Chips from "../components/Chips.astro";
+---
+<ContentPage
+  title="Event Runtime"
+  active="event-runtime"
+  kicker="Deep dive"
+  headline="Everything that happens is an event."
+  stand="The lab speaks in messages. The event runtime is what makes that mean something."
+>
+  <p>
+    Inside the <a href="/operate">Operate</a> layer, side effects are not a byproduct — they are
+    the point. Every action the agent takes, every signal the infrastructure emits, every approval
+    gate that opens or closes: all of it flows through a single event backbone built on NATS. Not
+    because the technology is fashionable, but because an append-only, subject-routed message system
+    is the natural shape of a lab that needs to know what happened, when, and in what order.
+  </p>
+
+  <h2>One backbone, many voices</h2>
+
+  <p>
+    NATS is a lightweight publish-subscribe messaging system. In the Operate layer it fills a
+    specific role: a shared nervous system through which every component can speak and listen without
+    knowing who else is in the room. The agent publishes. Source adapters publish. The audit trail
+    subscribes. The bridge subscribes. None of them are coupled to each other directly. They are
+    coupled only to the subject namespace and the schema — the two contracts that give the system
+    its coherence.
+  </p>
+
+  <p>
+    This is not a queue in disguise. A queue moves work. An event backbone records what happened
+    and lets any interested party draw its own conclusions. The distinction matters for a system
+    whose primary obligation is accountability.
+  </p>
+
+  <h2>Five roles, one runtime</h2>
+
+  <Chips items={["schema", "subjects", "store", "bridge", "adapters"]} />
+
+  <p>
+    Events are not free-form. Each carries a defined <strong>schema</strong> — a typed contract
+    specifying what fields are present, what they mean, and what constraints they satisfy. A schema
+    is not optional here: without one, consumers cannot trust what they receive, and the audit trail
+    cannot index what it stores. The schema is the handshake between every producer and every
+    consumer, made explicit.
+  </p>
+
+  <p>
+    Events travel on named <strong>subjects</strong> — the addressing layer of the runtime.
+    A subject identifies what happened and where in the system it happened. Producers write to a
+    subject; consumers subscribe to subjects or subject patterns. The subject hierarchy is, in
+    effect, the vocabulary of the lab's internal language: a grammar for things that occur.
+  </p>
+
+  <p>
+    The <strong>store</strong> gives events durability. Published messages do not vanish after
+    delivery; they accumulate in an ordered, replayable log. This is what separates an event-driven
+    system from a fire-and-forget notification scheme: you can go back. You can replay. You can
+    answer questions about the past that no one thought to ask at the time.
+  </p>
+
+  <p>
+    The <strong>bridge</strong> connects the runtime across topological boundaries — between the
+    operator layer and anything that lives outside it. Events that need to cross a boundary travel
+    through the bridge, which handles the mechanics of that crossing without letting each side reach
+    into the other's internals. The boundary stays hard; the information still flows.
+  </p>
+
+  <p>
+    <strong>Source adapters</strong> are the translators. The real world does not speak in typed
+    events. A host changes state. A backup job completes. A network alarm fires. Adapters watch
+    these signals through the governed connectivity layer and translate them into well-formed events
+    the runtime can reason about. The translation is explicit, typed, and goes through schema
+    validation before anything downstream sees it.
+  </p>
+
+  <h2>Why this shape fits</h2>
+
+  <p>
+    Event-driven systems earn their complexity by solving three problems at once — and in a
+    governed-autonomy context, all three matter.
+  </p>
+
+  <p>
+    <strong>Auditability</strong> becomes structural rather than bolted on. The event store and the
+    append-only audit trail are not separate concerns: they reinforce each other. Every action the
+    agent takes is an event; every event is retained. There is no separate audit log to maintain
+    because the log is the audit trail. The two records are, at their core, the same record.
+  </p>
+
+  <p>
+    <strong>Decoupling</strong> is real, not rhetorical. An agent that calls infrastructure
+    directly, or a script that polls and acts in the same breath, creates invisible dependencies.
+    The event backbone breaks that link. Source adapters translate real-world signals; consumers
+    subscribe to what they care about. Adding a new subscriber — a new check, a new alert, a new
+    archival hook — does not require touching the producer. The capability registry can still gate
+    what the agent may do; the event runtime handles what it actually did.
+  </p>
+
+  <p>
+    <strong>Observability</strong> is first-class, not reconstructed after the fact. In a system
+    built around event sourcing, "what happened?" is not answered by grepping application logs. It
+    is a query against a structured, ordered, typed record. The shape of the runtime is also the
+    shape of the answer.
+  </p>
+
+  <PullQuote>The audit trail is not a report generated at the end. It is the event stream, read from the beginning.</PullQuote>
+
+  <Callout tone="operate" label="Part of the governed-autonomy stack">
+    <p>
+      The event runtime does not sit beside the <a href="/governed-autonomy">governed-autonomy</a>
+      machinery — it is woven through it. Every agent action that flows through the capability
+      registry and RBAC policy also emits an event. The hard ceiling and the audit record are
+      enforced in the same transaction. Autonomy without a ledger is just automation; the event
+      backbone is what makes the autonomy governable.
+    </p>
+  </Callout>
+</ContentPage>

@@ -1,0 +1,113 @@
+---
+import ContentPage from "../layouts/ContentPage.astro";
+import PullQuote from "../components/PullQuote.astro";
+import Callout from "../components/Callout.astro";
+---
+<ContentPage
+  title="Operate"
+  active="operate"
+  kicker="Boundary II · Operate"
+  headline="Governed hands on the infrastructure."
+  stand="The part that is allowed to act — and only so far."
+>
+  <p>
+    <a href="/describe">Describe</a> documents the lab. Operate acts on it. That asymmetry
+    is the point. The boundary called Operate (<code>agent-ops</code>) is the only part of
+    this architecture that reaches live infrastructure. It holds the SSH keys, the API
+    credentials, and the surface through which an AI agent can make things happen. It is,
+    deliberately, the smallest possible footprint that satisfies that requirement.
+  </p>
+
+  <h2>Agent-agnostic by design</h2>
+
+  <p>
+    Operate is built around an agent, not built for one. Today that agent is called Hermes.
+    Tomorrow it could be something else entirely — a different model, a different provider,
+    a different interface. The abstractions are vendor-neutral by intention: the authorization
+    path, the capability registry, the audit trail, none of them reference a specific model
+    or provider SDK. The agent makes requests; Operate decides what executes.
+  </p>
+
+  <p>
+    This is not accidental modularity. It reflects a deliberate architectural bet: the
+    governance layer should outlast any particular AI product cycle. Hermes is the current
+    occupant of a seat that was built for anyone.
+  </p>
+
+  <h2>The hard ceiling</h2>
+
+  <p>
+    At the center of Operate is the <strong>capability registry</strong>: an allowlist of
+    every operation the agent may ever attempt. Anything not on the list is not blocked by
+    a policy — it is simply uncallable. There is no override, no privileged path, no
+    emergency bypass that skirts the registry. It defines the outer bound of autonomy, and
+    that bound is structural.
+  </p>
+
+  <p>
+    Inside that ceiling, an <strong>RBAC policy and approval rules</strong> further divide
+    the space. Some operations run freely under a given role; others pause and wait for an
+    explicit human decision before they execute. The two layers are complementary: the
+    registry defines what the agent is allowed to want; the policy determines what it can
+    do without asking.
+  </p>
+
+  <p>
+    Every attempt — approved, rejected, or pending human review — is written to an
+    <strong>append-only audit trail</strong>. Nothing is elided. The record exists
+    independent of outcome.
+  </p>
+
+  <PullQuote>The registry does not block the uncallable. It makes the uncallable not exist.</PullQuote>
+
+  <h2>Governed connectivity and the inventory interface</h2>
+
+  <p>
+    The two live wires in Operate are SSH access to the compute layer and the UniFi
+    management API. Both flow through the same governance surface — the same capability
+    ceiling, the same approval policy, the same audit record. There is no side channel;
+    every action taken on infrastructure is accounted for.
+  </p>
+
+  <p>
+    The inventory interface is a deliberately narrow seam. Operate reads the lab's physical
+    and logical state from <code>inventory.yaml</code> through Describe's
+    <code>load_inventory()</code> entry point — the same function every other consumer uses.
+    It does not maintain its own copy. It does not shadow or fork the data. One source of
+    truth means one source of truth.
+  </p>
+
+  <Callout tone="operate" label="The describe–operate contract">
+    <p>
+      Data flows in one direction: Describe to Operate. Operate reads the inventory through
+      <code>load_inventory()</code>; it writes back to Describe only through the gated
+      pipeline — validate → render → diagram → tests → human commit. Neither boundary
+      reaches into the other's internals. Describe has no awareness that Operate exists.
+    </p>
+  </Callout>
+
+  <h2>An event backbone, and what comes next</h2>
+
+  <p>
+    Underneath the governance surface is a <strong>NATS event runtime</strong>: a backbone
+    through which everything that happens in the lab is reported. Schema-validated subjects,
+    a durable store, source adapters, and a bridge that ties the operational layer to the
+    event record. What happened does not just get logged — it flows, in a form the rest of
+    the system can reason about.
+  </p>
+
+  <p>
+    This is the infrastructure that makes meaningful autonomy possible. An agent that can
+    only act inside a defined ceiling, under a policy it cannot modify, against a record it
+    cannot edit, emitting events it cannot suppress — that agent is genuinely useful without
+    being unconstrained. The tension between those two properties is worth examining closely,
+    which is why it has its own page.
+  </p>
+
+  <p>
+    The mechanics of what that looks like in practice are in
+    <a href="/governed-autonomy">governed autonomy</a> and the
+    <a href="/event-runtime">event runtime</a> deep dives. The short version: Operate is
+    where the ceiling lives, and the ceiling is load-bearing.
+  </p>
+</ContentPage>

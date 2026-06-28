@@ -1,0 +1,89 @@
+---
+import ContentPage from "../layouts/ContentPage.astro";
+import PullQuote from "../components/PullQuote.astro";
+import Callout from "../components/Callout.astro";
+---
+<ContentPage
+  title="Publish"
+  active="publish"
+  kicker="Boundary III · Publish"
+  headline="You are reading the third boundary."
+  stand="What crosses this boundary was never secret. The rest never crossed."
+>
+  <p>
+    This page is an artifact of the boundary it describes. Every word here passed through the same
+    allowlist projection it explains. The data that did not pass through is invisible not because
+    it was hidden, but because it was never sent. That distinction is the entire point.
+  </p>
+
+  <h2>A projection, not a redaction</h2>
+
+  <p>
+    The lab's source of truth lives in <code>inventory.yaml</code> inside the
+    <a href="/single-source-of-truth">Describe boundary</a>. That file holds every host, network,
+    VLAN, service route, and known issue in the lab. It is not published here. It is not copied
+    here with sensitive fields removed. That distinction matters: a redaction is a scrub that can
+    be done wrong. A projection only emits what is explicitly allowlisted. If the allowlist does
+    not name it, it produces no output. Not an empty string, not a placeholder. Nothing.
+  </p>
+
+  <p>
+    The allowlist runs at build time. Each field in the inventory carries a publication status.
+    Fields marked publishable cross the boundary; all others do not exist in the build context.
+    The result is a strict subset of the real shape of the lab, constructed from scratch by the
+    projection step rather than arrived at by subtraction. The mechanism is fail-closed: adding
+    a new field to the inventory keeps it private by default until an author deliberately marks
+    it publishable.
+  </p>
+
+  <PullQuote>Secrets are not scrubbed from this site. They were never compiled in.</PullQuote>
+
+  <h2>Two independent guards</h2>
+
+  <p>
+    The allowlist projection is the first guard. It is not the only one.
+  </p>
+
+  <p>
+    An independent tripwire runs on the build output after the projection step and before the
+    site is assembled. It scans for anything that looks like it should not be public: patterns
+    characteristic of internal IP addresses, API tokens, host credentials, and identifiers that
+    are not meant to travel. If the scanner finds a match, the build fails. The site does not ship.
+  </p>
+
+  <p>
+    Two independent mechanisms must both fail simultaneously for a secret to reach the public.
+    The projection must emit something it should not, and the tripwire must fail to catch it.
+    Either failure alone is recoverable. Both failing together is the actual threat model, and
+    designing for it means no single point of failure controls the outcome.
+  </p>
+
+  <h2>Static by construction</h2>
+
+  <p>
+    The public build never sees <code>inventory.yaml</code>. The build toolchain receives only
+    the pre-sanitized output of the projection step: a curated data structure whose contents
+    were already verified by the tripwire. There is no configuration to tweak, no environment
+    variable to expose, no code path that would cause raw inventory data to flow downstream.
+    The build is one-way. Air-gap here means not that secrets are locked up tightly, but that
+    the path that would carry them does not exist.
+  </p>
+
+  <p>
+    What ships is a fully static build: compiled HTML, CSS, and JavaScript. No server, no
+    database, no server-side rendering touching live data. There is no runtime connection to
+    the lab, no webhook listening for state changes, no endpoint that reflects anything internal.
+    The pipeline terminates at publication. It does not reach back.
+  </p>
+
+  <Callout tone="publish" label="You are here">
+    <p>
+      This site is Boundary III. It exists because the other two boundaries work: the
+      <a href="/single-source-of-truth">single source of truth</a> in Describe generates the
+      data, and the projection plus tripwire decide what crosses. The lab has considerably more
+      state than what is visible here. What is not visible is not hidden behind this page. It
+      was never sent to it. See the <a href="/colophon">colophon</a> for how the build
+      pipeline is assembled.
+    </p>
+  </Callout>
+</ContentPage>

@@ -1,0 +1,108 @@
+---
+import ContentPage from "../layouts/ContentPage.astro";
+import PullQuote from "../components/PullQuote.astro";
+import StatRow from "../components/StatRow.astro";
+---
+<ContentPage
+  title="The Thesis"
+  active="thesis"
+  kicker="I · The Thesis"
+  headline="Describe, operate, publish."
+  stand="How a home lab earns the right to operate itself."
+>
+  <p>
+    Most self-hosted labs collapse everything into a single pile. Configuration, credentials,
+    live operations, and documentation exist in overlapping layers. When something breaks, you
+    cannot tell what is canonical. When you want to automate, you cannot draw a line around
+    what the agent is permitted to touch. When you want to share what you built, you cannot,
+    because the shareable description is entangled with the secrets.
+  </p>
+  <p>
+    The answer is to draw boundaries — not by convention, but by structure.
+  </p>
+
+  <StatRow stats={[{ n: "3", l: "Boundaries" }, { n: "1", l: "Source of truth" }, { n: "0", l: "Secrets shipped" }]} />
+
+  <h2>Three repositories, three jobs</h2>
+  <p>
+    The lab is organized as three separate git repositories, each with a single responsibility
+    and a hard constraint on what it may touch.
+  </p>
+  <p>
+    <a href="/describe">Describe</a> documents the lab: every host, every network segment,
+    every service, every known issue. Its core is a single YAML file, <code>inventory.yaml</code>,
+    and everything else — reference docs, architecture diagrams — is generated from it
+    deterministically. Describe touches no infrastructure and holds no credentials. It is safe
+    to read by anyone with repository access.
+  </p>
+  <p>
+    <a href="/operate">Operate</a> acts on the infrastructure on behalf of an AI agent. It holds
+    the credentials that Describe never sees. Its defining feature is not what it can do but what
+    it cannot: a capability registry enumerates every operation the agent may ever attempt, and
+    anything not in that list is structurally unreachable. A policy layer decides which enumerated
+    operations run freely and which require explicit human approval before they execute. An
+    append-only audit trail records everything.
+  </p>
+  <p>
+    <a href="/publish">Publish</a> is this site: a curated, redacted projection generated from
+    the same inventory. Only fields explicitly marked publishable cross the boundary; everything
+    else is private by default, fail-closed. An independent tripwire scans the output before the
+    build completes and fails it if anything secret-shaped appears. Nothing sensitive is here,
+    by construction.
+  </p>
+
+  <h2>One source of truth, everything generated</h2>
+  <p>
+    The inventory file is written once. Every downstream artifact — reference docs, architecture
+    diagrams, the data that powers this site — is derived from it by a deterministic pipeline.
+    Two runs produce byte-identical output. There is no second place where a host is described,
+    no narrative that can drift from the data, no hand-written document to fall out of sync.
+  </p>
+  <p>
+    The pipeline enforces this. A validator runs first, rejecting any YAML that violates the
+    schema or contains dangling references. A coherence checker confirms that every generated
+    artifact has exactly one home and that no generated file has been hand-edited. The discipline
+    is mechanical, not remembered.
+  </p>
+
+  <h2>Governed autonomy</h2>
+  <p>
+    The agent can act. That is the point: a home lab that handles routine maintenance, responds
+    to conditions, executes tasks on request. But the outer boundary of what it may do is defined
+    before it runs, by a human-authored registry it cannot modify. The <a href="/governed-autonomy">capability
+    registry</a> is the hard ceiling. Anything not enumerated is uncallable, not merely discouraged.
+    The approval policy gates consequential moves. The audit trail means nothing goes unrecorded.
+  </p>
+  <p>
+    This is not a safety layer bolted on afterward. It is the architecture. The agent does not
+    have general access to the infrastructure; it has a precisely bounded slice, with every
+    boundary enforced at the call level, not the prompt level.
+  </p>
+
+  <h2>Why the separation is the point</h2>
+  <p>
+    Drawing these boundaries is not administrative overhead. It is the mechanism by which the
+    design is secure.
+  </p>
+  <p>
+    When credentials live in Operate and nowhere else, they cannot surface through Describe or
+    through this public site — not because someone remembered to exclude them, but because no
+    code path for including them exists. When the agent's authority is capped by a registry it
+    cannot modify, it cannot overreach — not because the agent has good intentions, but because
+    the operation does not exist. When every artifact is generated from one source, there is
+    nothing to fall out of sync.
+  </p>
+
+  <PullQuote>The safest secret is the one that is structurally impossible to leak.</PullQuote>
+
+  <p>
+    The thesis is this: a home lab can be self-operating, publicly documented, and secure — not
+    by being careful, but by being structured. The seams between Describe, Operate, and Publish
+    are not cosmetic. They are load-bearing.
+  </p>
+  <p>
+    The following pages examine each boundary in turn, then treat <a href="/governed-autonomy">governed
+    autonomy</a> as its own subject — because the relationship between an agent and a hard ceiling
+    is the part of the design most worth understanding.
+  </p>
+</ContentPage>
