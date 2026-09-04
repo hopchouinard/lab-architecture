@@ -22,9 +22,14 @@ This site is the third boundary. It is **hand-authored prose**, not a generated
 projection of the lab: no `inventory.yaml` data, no hostnames, no addresses and
 no credentials are exported into it, and no build step here reads anything from
 the lab. The explorer's physical graph is a deliberately generic stand-in
-(`src/data/graph.ts` says so at the top). That is why nothing sensitive can
-appear here — not because a filter removes it, but because it was never
+(`src/data/graph.ts` says so at the top). That is why no lab data can appear
+here **by ingestion** — not because a filter removes it, but because it was never
 imported.
+
+That is a claim about the pipeline and not a guarantee about the output. An
+author who types a real hostname, address or credential into a page ships it:
+the build compiles what it is given and nothing scans the result. Covering that
+path is what the tripwire below is for.
 
 The inventory-fed allowlist projection and the output tripwire that would let
 this site carry real lab data are **designed and not built**. The site's pages

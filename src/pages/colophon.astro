@@ -29,13 +29,13 @@ import Chips from "../components/Chips.astro";
 
   <Callout tone="publish" label="What is not here yet">
     <p>
-      The <a href="/publish">Publish</a> boundary is designed around two mechanisms — an
-      allowlist projection that emits only fields explicitly marked publishable, and an
-      independent tripwire that scans build output for anything secret-shaped and fails the
-      build on a match. <strong>Neither is built.</strong> No inventory field carries a
-      publication marker and this repository's build runs no output scan. They are the
-      prerequisite for ever feeding this site real lab data, not a description of what
-      guards it today.
+      The <a href="/publish">Publish</a> boundary is designed around two mechanisms, and
+      <strong>neither is built</strong>: an allowlist projection that does not exist, which
+      would emit only fields explicitly marked publishable, and an independent tripwire that
+      does not exist either, which would scan build output for anything secret-shaped and fail
+      the build on a match. No inventory field carries a publication marker and this
+      repository's build runs no output scan. They are the prerequisite for ever feeding this
+      site real lab data, not a description of what guards it today.
     </p>
   </Callout>
 
@@ -100,8 +100,10 @@ import Chips from "../components/Chips.astro";
   </p>
 
   <p>
-    The site cannot leak the lab's secrets. They were never compiled into it — and while
-    that remains true by absence rather than by filter, it is worth saying plainly rather
-    than dressing it up as a pipeline.
+    No pipeline carries the lab's secrets toward this site; they were never compiled into
+    it. That is a property of absence, not of a filter, and it is worth saying plainly rather
+    than dressing it up. It also has a limit worth stating in the same breath: an author who
+    types a real identifier into a page publishes it, because nothing scans the output. The
+    boundary holds against ingestion. It does not hold against a mistake.
   </p>
 </ContentPage>

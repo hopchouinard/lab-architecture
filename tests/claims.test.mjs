@@ -60,27 +60,32 @@ const RUNNING_MECHANISM = [
   /fails it if anything secret-shaped/i,
 ];
 
-// A mechanism named as unbuilt IN THE SAME SENTENCE as the mechanism word.
-// A file-wide search for "not built" is not enough: a page can carry an
-// unrelated conditional elsewhere and satisfy it while asserting the opposite
-// where it counts. Sentence proximity is what ties the disclaimer to its subject.
-const MECHANISM = "tripwire|allowlist projection|publish projection|projection";
-const UNBUILT = "does not exist|do not exist|not built|not yet built|designed and not|designed but not|designed, not built|neither is built|would ";
-const SENTENCE_SCOPED_DISCLAIMER = new RegExp(
-  `((${MECHANISM})[^.!?]{0,200}(${UNBUILT}))|((${UNBUILT})[^.!?]{0,200}(${MECHANISM}))`,
-  "i",
-);
+// Each unbuilt mechanism is checked SEPARATELY. A page-level "some disclaimer
+// exists somewhere" match is not enough: a page naming both mechanisms can
+// disclaim one and assert the other, and the page-level form passes it.
+const MECHANISMS = ["tripwire", "allowlist projection", "publish projection"];
+const UNBUILT =
+  "does not exist|do not exist|nor the [a-z ]*exists|neither[^.!?]{0,40}exists|not built|not yet built|designed and not|designed but not|designed, not built|neither is built|would ";
 
-test("pages that name the projection or tripwire also say they are not built", () => {
-  const names = /tripwire|allowlist projection|publish projection/i;
+/** The mechanism and an unbuilt marker inside one sentence, in either order. */
+function disclaimerFor(mechanism) {
+  const m = mechanism.replace(/ /g, "\\s+");
+  return new RegExp(
+    `((${m})[^.!?]{0,200}(${UNBUILT}))|((${UNBUILT})[^.!?]{0,200}(${m}))`,
+    "i",
+  );
+}
+
+test("every unbuilt mechanism a page names is disclaimed in the same sentence", () => {
   for (const { name, text } of pages) {
-    if (!names.test(text)) continue;
-
-    assert.match(
-      text,
-      SENTENCE_SCOPED_DISCLAIMER,
-      `${name} names an unbuilt publish mechanism without saying, in the same sentence, that it is unbuilt`,
-    );
+    for (const mechanism of MECHANISMS) {
+      if (!new RegExp(mechanism.replace(/ /g, "\\s+"), "i").test(text)) continue;
+      assert.match(
+        text,
+        disclaimerFor(mechanism),
+        `${name} names "${mechanism}" without saying, in the same sentence, that it is unbuilt`,
+      );
+    }
 
     for (const pattern of RUNNING_MECHANISM) {
       assert.doesNotMatch(

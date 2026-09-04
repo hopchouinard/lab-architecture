@@ -47,7 +47,7 @@ import Callout from "../components/Callout.astro";
     generated output.
   </p>
 
-  <PullQuote>Secrets are not scrubbed from this site. They were never compiled into it.</PullQuote>
+  <PullQuote>No filter keeps the lab's secrets off this page. Nothing ever carried them toward it.</PullQuote>
 
   <h2>What the boundary is designed to become</h2>
 
@@ -59,18 +59,18 @@ import Callout from "../components/Callout.astro";
   </p>
 
   <p>
-    The first is an <strong>allowlist projection</strong>. Each field in the inventory would
-    carry a publication status; fields marked publishable cross the boundary and all others
-    do not exist in the build context. The point of a projection rather than a redaction is
+    The first is an <strong>allowlist projection</strong>, which does not exist today. Each
+    field in the inventory would carry a publication status; fields marked publishable would
+    cross the boundary and all others would not exist in the build context. The point of a projection rather than a redaction is
     that a redaction is a scrub that can be done wrong, while a projection only ever emits
     what is explicitly named. Adding a field to the inventory would keep it private by
     default until an author deliberately marked it otherwise: fail-closed, not fail-open.
   </p>
 
   <p>
-    The second is an independent <strong>tripwire</strong> over the build output — a scan
-    for anything secret-shaped, run after the projection and before the site is assembled,
-    failing the build on a match. Its value is that it is not the projection. Two mechanisms
+    The second is an independent <strong>tripwire</strong> over the build output, which does
+    not exist either — a scan for anything secret-shaped that would run after the projection
+    and before the site is assembled, failing the build on a match. Its value is that it is not the projection. Two mechanisms
     would have to fail together for a secret to reach the public, and neither one's authors
     can talk the other out of its verdict.
   </p>

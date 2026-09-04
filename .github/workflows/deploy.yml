@@ -9,7 +9,8 @@ name: Deploy to Cloudflare Pages
 #
 # If either is ever absent the build still runs (as CI) and only the deploy step
 # is skipped, so a missing secret reads as a skipped deploy rather than a red
-# build. The token-presence check below is what makes that true.
+# build. The presence check below is what makes that true, and it checks BOTH —
+# checking only the token would let an empty account id reach the deploy.
 
 on:
   push:
@@ -42,15 +43,26 @@ jobs:
       # shipping. See tests/claims.test.mjs for why each guard exists.
       - run: npm test
 
-      # Read the secret into an env var (safe pattern) and check it's present.
-      - name: Check for deploy token
+      # Read the secrets into env vars (safe pattern) and check BOTH are present.
+      # The token alone is not enough: wrangler-action takes accountId as a
+      # separate input, so an empty CLOUDFLARE_ACCOUNT_ID would reach the deploy
+      # rather than skip it.
+      - name: Check for deploy credentials
         id: token
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          missing=""
           if [ -z "$CF_TOKEN" ]; then
+            missing="CLOUDFLARE_API_TOKEN"
+          fi
+          if [ -z "$CF_ACCOUNT" ]; then
+            missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"
+          fi
+          if [ -n "$missing" ]; then
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::CLOUDFLARE_API_TOKEN not set — skipping deploy (build validated only)."
+            echo "::notice::$missing not set — skipping deploy (build validated only)."
           else
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
