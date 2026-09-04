@@ -12,12 +12,13 @@ name: Deploy to Cloudflare Pages
 # build. The presence check below is what makes that true, and it checks BOTH —
 # checking only the token would let an empty account id reach the deploy.
 
+# Deliberately NOT triggered by pull_request. Same-repo pull requests receive
+# repository secrets, and an `if:` on the deploy step is not a security boundary
+# because the PR can edit that condition, or an earlier step, in the same diff.
+# PR validation runs credential-free in ci.yml; this workflow — the only one
+# holding the Cloudflare token — fires only on a push that has already landed.
 on:
   push:
-    branches: [main]
-  # Pull requests build and test but never deploy, so the claim guards run
-  # BEFORE a correction is merged rather than after it has already shipped.
-  pull_request:
     branches: [main]
   workflow_dispatch: {}
 
@@ -68,8 +69,7 @@ jobs:
           fi
 
       - name: Deploy to Cloudflare Pages
-        # Never on pull_request: a PR must not be able to publish to production.
-        if: steps.token.outputs.present == 'true' && github.event_name != 'pull_request'
+        if: steps.token.outputs.present == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

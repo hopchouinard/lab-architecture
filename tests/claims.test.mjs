@@ -18,14 +18,31 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 const srcDir = new URL("../src", import.meta.url).pathname;
 const pagesDir = join(srcDir, "pages");
 
-const pages = readdirSync(pagesDir)
-  .filter((f) => f.endsWith(".astro"))
-  .map((f) => ({ name: f, text: readFileSync(join(pagesDir, f), "utf8") }));
+// Every routable extension, discovered recursively. A flat `.astro`-only scan
+// silently skips a nested route (src/pages/guides/x.astro) and every Markdown
+// or MDX page — and @astrojs/mdx is installed here, so those are real routes.
+// A guard that does not see a page cannot guard it.
+const PAGE_EXT = /\.(astro|md|mdx|markdown|html)$/i;
+
+function collectPages(dir) {
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...collectPages(full));
+    } else if (PAGE_EXT.test(entry.name)) {
+      out.push({ name: relative(pagesDir, full), text: readFileSync(full, "utf8") });
+    }
+  }
+  return out;
+}
+
+const pages = collectPages(pagesDir);
 
 const graph = readFileSync(join(srcDir, "data", "graph.ts"), "utf8");
 
@@ -95,7 +112,18 @@ test("every unbuilt mechanism a page names is disclaimed in the same sentence", 
       );
     }
   }
-  assert.match(graph, /designed, not built/, "graph.ts must label the unbuilt publish nodes");
+  // Per node, not per file: a single "designed, not built" anywhere in graph.ts
+  // would let the OTHER node be flipped back to a present-tense claim while the
+  // assertion still passed, and graph.ts feeds the public explorer directly.
+  for (const id of ["allowlist", "tripwire"]) {
+    const node = graph.match(new RegExp(`id:\\s*"${id}"[\\s\\S]{0,700}?\\n  \\}`));
+    assert.ok(node, `graph.ts no longer has a node with id "${id}" — update this guard`);
+    assert.match(
+      node[0],
+      /designed, not built/,
+      `graph.ts node "${id}" must carry kind: "designed, not built"`,
+    );
+  }
 });
 
 test("no page claims this site is generated from the inventory", () => {

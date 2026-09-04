@@ -1,0 +1,39 @@
+name: CI
+
+# PR validation, deliberately CREDENTIAL-FREE.
+#
+# This job exists as a separate workflow from deploy.yml so that pull-request
+# code never runs in a job that has the Cloudflare secrets in scope. An `if:`
+# on a deploy step is not a security boundary — a PR can edit the step or the
+# condition, and same-repo pull requests do receive repository secrets. Keeping
+# the credentials in a workflow that only ever fires on push to main is a
+# boundary, because a PR's edit to that file does not take effect until it is
+# merged.
+#
+# Nothing here needs a secret: the build is static and the tests read dist/.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # The claim guards. A page that revives a retired claim fails here,
+      # before review, rather than after it has already shipped.
+      - run: npm test
