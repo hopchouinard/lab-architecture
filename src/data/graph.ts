@@ -6,9 +6,11 @@
 // the components that realize it. Positions are hand-placed for an intentional
 // three-band layout (describe → operate → publish), left to right.
 //
-// The physical layer is deliberately generic. When the inventory-fed allowlist
-// generator lands, it will emit this same shape from inventory.yaml; until then
-// this curated version keeps the explorer fully testable with nothing sensitive.
+// The physical layer is deliberately generic. If the inventory-fed allowlist
+// generator is ever built, it could emit this same shape from inventory.yaml;
+// until then this curated version keeps the explorer fully testable with nothing
+// sensitive. Nodes whose `kind` reads "designed, not built" describe intended
+// mechanisms that do not exist yet — keep that label accurate.
 
 export type Boundary = "describe" | "operate" | "publish" | "physical";
 
@@ -137,9 +139,9 @@ export const CONCEPT_NODES: GraphNode[] = [
     label: "Connectivity",
     boundary: "operate",
     kind: "governed access",
-    summary: "Governed SSH and network-API access.",
+    summary: "Every live wire the agent touches, reached through the registry.",
     detail:
-      "The live wires into the infrastructure — SSH to the compute layer and the network controller's API — exercised only through the registry.",
+      "The live wires into the infrastructure — SSH to the compute layer, the network controller's API, the metrics store, the event runtime, and the documentation and inventory git remotes. The agent reaches each one only through a registered capability. The operator's break-glass path reaches the compute layer outside this, which is why its use is journaled and counted.",
     x: 540,
     y: 110,
   },
@@ -149,10 +151,10 @@ export const CONCEPT_NODES: GraphNode[] = [
     id: "allowlist",
     label: "Allowlist export",
     boundary: "publish",
-    kind: "fail-closed",
-    summary: "Only what is marked publishable crosses over.",
+    kind: "designed, not built",
+    summary: "Would let only marked fields cross over.",
     detail:
-      "A projection of the inventory in which nothing is published unless explicitly allowed. New fields are private by default — the boundary fails closed.",
+      "A projection of the inventory in which nothing is published unless explicitly allowed, so new fields stay private by default. It does not exist yet: no inventory field carries a publication marker and no generator emits this projection.",
     x: 760,
     y: 130,
   },
@@ -160,10 +162,10 @@ export const CONCEPT_NODES: GraphNode[] = [
     id: "tripwire",
     label: "Tripwire",
     boundary: "publish",
-    kind: "second guard",
-    summary: "An independent scan that refuses to ship secrets.",
+    kind: "designed, not built",
+    summary: "Would refuse to ship anything secret-shaped.",
     detail:
-      "Scans the generated output for anything secret-shaped and fails the build if it finds it. Two independent guards must both fail for a leak to ship.",
+      "An independent scan over build output that fails the build on a match, so two guards would have to fail together for a leak to ship. The site's build runs no such scan today.",
     x: 760,
     y: 270,
   },
@@ -171,10 +173,10 @@ export const CONCEPT_NODES: GraphNode[] = [
     id: "site",
     label: "This site",
     boundary: "publish",
-    kind: "projection",
-    summary: "A redacted projection anyone can read.",
+    kind: "hand-authored",
+    summary: "A public account anyone can read.",
     detail:
-      "Built entirely from pre-sanitized data; the public build never sees the inventory. Static, with no live data and no path back into the lab.",
+      "Written by hand, including this graph. No lab data is imported into it at all — the public build never sees the inventory, directly or indirectly. Static, with no live data and no path back into the lab.",
     x: 760,
     y: 410,
   },
@@ -183,15 +185,14 @@ export const CONCEPT_NODES: GraphNode[] = [
 export const CONCEPT_EDGES: GraphEdge[] = [
   { id: "c-inv-views", source: "inventory", target: "generated-views", label: "generates" },
   { id: "c-inv-coh", source: "inventory", target: "coherence", label: "checked by" },
-  { id: "c-inv-allow", source: "inventory", target: "allowlist", label: "projected" },
-  { id: "c-allow-trip", source: "allowlist", target: "tripwire", label: "scanned by" },
-  { id: "c-trip-site", source: "tripwire", target: "site", label: "ships" },
+  { id: "c-inv-allow", source: "inventory", target: "allowlist", label: "would project" },
+  { id: "c-allow-trip", source: "allowlist", target: "tripwire", label: "would be scanned by" },
+  { id: "c-trip-site", source: "tripwire", target: "site", label: "would ship" },
   { id: "c-agent-reg", source: "agent", target: "registry", label: "bounded by" },
   { id: "c-reg-pol", source: "registry", target: "policy", label: "within" },
   { id: "c-pol-aud", source: "policy", target: "audit", label: "records" },
   { id: "c-agent-conn", source: "agent", target: "connectivity", label: "acts via" },
-  { id: "c-agent-nats", source: "agent", target: "nats", label: "emits" },
-  { id: "c-nats-aud", source: "nats", target: "audit", label: "feeds" },
+  { id: "c-aud-nats", source: "audit", target: "nats", label: "mirrored to" },
   { id: "c-reg-inv", source: "registry", target: "inventory", label: "reads" },
 ];
 

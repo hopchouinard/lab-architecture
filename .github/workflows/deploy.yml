@@ -3,17 +3,31 @@ name: Deploy to Cloudflare Pages
 # Push-to-deploy: every push to main builds the site and deploys it to the
 # `patchoutech-architecture` Cloudflare Pages project.
 #
-# Requires two repo secrets:
+# Requires two repo secrets, both set since 2026-06-28:
 #   CLOUDFLARE_API_TOKEN  — a scoped token with Account > Cloudflare Pages > Edit
 #   CLOUDFLARE_ACCOUNT_ID — the Cloudflare account id
 #
-# Until CLOUDFLARE_API_TOKEN is set, the build still runs (as CI) and the deploy
-# step is skipped — no red failures while the token is pending.
+# If either is ever absent the build still runs (as CI) and only the deploy step
+# is skipped, so a missing secret reads as a skipped deploy rather than a red
+# build. The presence check below is what makes that true, and it checks BOTH —
+# checking only the token would let an empty account id reach the deploy.
 
+# This is the ONLY workflow that touches the Cloudflare credentials, and its
+# trigger list is deliberately one line long.
+#
+# Not `pull_request`: same-repo pull requests receive repository secrets, and an
+# `if:` on the deploy step is not a boundary because the PR can edit that
+# condition, or any earlier step, in the same diff the workflow then runs. PR
+# validation lives in ci.yml, which references no secret at all.
+#
+# Not `workflow_dispatch` either: `gh workflow run --ref <branch>` runs the
+# workflow file *as it exists on that ref*, so anyone able to dispatch could
+# select a PR branch carrying an edited version of this file and reach the
+# token with it. A manual re-deploy is an empty commit on main, which is a
+# push, which is already covered.
 on:
   push:
     branches: [main]
-  workflow_dispatch: {}
 
 jobs:
   deploy:
@@ -32,21 +46,37 @@ jobs:
 
       - run: npm run build
 
-      # Read the secret into an env var (safe pattern) and check it's present.
-      - name: Check for deploy token
+      # The suite asserts over dist/, so it runs after the build and before the
+      # deploy: a page that revives a retired claim fails here rather than
+      # shipping. See tests/claims.test.mjs for why each guard exists.
+      - run: npm test
+
+      # Read the secrets into env vars (safe pattern) and check BOTH are present.
+      # The token alone is not enough: wrangler-action takes accountId as a
+      # separate input, so an empty CLOUDFLARE_ACCOUNT_ID would reach the deploy
+      # rather than skip it.
+      - name: Check for deploy credentials
         id: token
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          missing=""
           if [ -z "$CF_TOKEN" ]; then
+            missing="CLOUDFLARE_API_TOKEN"
+          fi
+          if [ -z "$CF_ACCOUNT" ]; then
+            missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"
+          fi
+          if [ -n "$missing" ]; then
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::CLOUDFLARE_API_TOKEN not set — skipping deploy (build validated only)."
+            echo "::notice::$missing not set — skipping deploy (build validated only)."
           else
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Deploy to Cloudflare Pages
-        if: steps.token.outputs.present == 'true'
+        if: steps.token.outputs.present == 'true' && github.ref == 'refs/heads/main'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -44,17 +44,18 @@ import StatRow from "../components/StatRow.astro";
     append-only audit trail records everything.
   </p>
   <p>
-    <a href="/publish">Publish</a> is this site: a curated, redacted projection generated from
-    the same inventory. Only fields explicitly marked publishable cross the boundary; everything
-    else is private by default, fail-closed. An independent tripwire scans the output before the
-    build completes and fails it if anything secret-shaped appears. Nothing sensitive is here,
-    by construction.
+    <a href="/publish">Publish</a> is this site: a public account of the other two boundaries.
+    Today it carries no lab data at all — the prose and the explorer's graph are hand-authored,
+    so no inventory fact reaches this site by any automated path. What an author types is
+    another matter, and the page below is explicit about it. The allowlist projection
+    and output tripwire that would let it carry real inventory data are designed and not yet
+    built; the <a href="/publish">Publish</a> page says exactly where that line falls.
   </p>
 
   <h2>One source of truth, everything generated</h2>
   <p>
-    The inventory file is written once. Every downstream artifact — reference docs, architecture
-    diagrams, the data that powers this site — is derived from it by a deterministic pipeline.
+    The inventory file is written once. Every downstream artifact inside the lab — the reference
+    documentation and the architecture diagram — is derived from it by a deterministic pipeline.
     Two runs produce byte-identical output. There is no second place where a host is described,
     no narrative that can drift from the data, no hand-written document to fall out of sync.
   </p>

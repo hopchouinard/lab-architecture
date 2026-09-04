@@ -8,82 +8,110 @@ import Callout from "../components/Callout.astro";
   active="publish"
   kicker="Boundary III · Publish"
   headline="You are reading the third boundary."
-  stand="What crosses this boundary was never secret. The rest never crossed."
+  stand="Nothing about the lab crossed into this page. That is the whole mechanism."
 >
   <p>
-    This page is an artifact of the boundary it describes. Every word here passed through the same
-    allowlist projection it explains. The data that did not pass through is invisible not because
-    it was hidden, but because it was never sent. That distinction is the entire point.
+    This page is an artifact of the boundary it describes, and the honest description is
+    simpler than the one you might expect. There is no filter standing between the lab's
+    data and this site, because no lab data is sent to it. Every word here was written by
+    hand. The site is a human account of the architecture, not a rendering of the
+    inventory that architecture is built around.
   </p>
 
-  <h2>A projection, not a redaction</h2>
+  <p>
+    That is a claim about the pipeline, and it should not be read as a stronger one. Nothing
+    here can leak <em>by ingestion</em>: no automated path carries a hostname, an address or a
+    credential from the lab into this build. It does not follow that nothing can leak at all.
+    An author who types a real identifier into a page ships it, because the build compiles what
+    it is given and nothing scans the result. Hand-authoring moves the risk from a mechanism to
+    a person; the tripwire described below is what would move it back.
+  </p>
+
+  <h2>Nothing crossed, so nothing had to be caught</h2>
 
   <p>
     The lab's source of truth lives in <code>inventory.yaml</code> inside the
-    <a href="/single-source-of-truth">Describe boundary</a>. That file holds every host, network,
-    VLAN, service route, and known issue in the lab. It is not published here. It is not copied
-    here with sensitive fields removed. That distinction matters: a redaction is a scrub that can
-    be done wrong. A projection only emits what is explicitly allowlisted. If the allowlist does
-    not name it, it produces no output. Not an empty string, not a placeholder. Nothing.
+    <a href="/single-source-of-truth">Describe boundary</a>. That file holds every host,
+    network, VLAN, service route, and known issue in the lab. It is not published here.
+    It is not copied here with sensitive fields removed. It is not read by this site's
+    build at all: no code path in this repository opens it, imports it, or receives
+    anything derived from it.
   </p>
 
   <p>
-    The allowlist runs at build time. Each field in the inventory carries a publication status.
-    Fields marked publishable cross the boundary; all others do not exist in the build context.
-    The result is a strict subset of the real shape of the lab, constructed from scratch by the
-    projection step rather than arrived at by subtraction. The mechanism is fail-closed: adding
-    a new field to the inventory keeps it private by default until an author deliberately marks
-    it publishable.
+    The <a href="/explorer">explorer's</a> physical layer is the one place a reader might
+    reasonably expect real lab data, and it is not. It is a curated, deliberately generic
+    stand-in — invented aliases, no real hostnames, addresses, or identifiers — hand-placed
+    to show the shape of the architecture rather than the contents of the rack. The source
+    file says as much in its opening comment, so a future contributor cannot mistake it for
+    generated output.
   </p>
 
-  <PullQuote>Secrets are not scrubbed from this site. They were never compiled in.</PullQuote>
+  <PullQuote>No filter keeps the lab's secrets off this page. Nothing ever carried them toward it.</PullQuote>
 
-  <h2>Two independent guards</h2>
-
-  <p>
-    The allowlist projection is the first guard. It is not the only one.
-  </p>
+  <h2>What the boundary is designed to become</h2>
 
   <p>
-    An independent tripwire runs on the build output after the projection step and before the
-    site is assembled. It scans for anything that looks like it should not be public: patterns
-    characteristic of internal IP addresses, API tokens, host credentials, and identifiers that
-    are not meant to travel. If the scanner finds a match, the build fails. The site does not ship.
+    Hand-authoring is a narrow guarantee and a weak pipeline. It rules out one failure — no
+    automated path carries lab data here — and rules out nothing else: it cannot stay current
+    on its own, and it cannot stop an author from typing something real. Every fact on this
+    site is a fact a human re-checked. The intended end state closes both gaps with two
+    mechanisms, and it is worth being precise that both are
+    <strong>designed and not yet built</strong>.
   </p>
 
   <p>
-    Two independent mechanisms must both fail simultaneously for a secret to reach the public.
-    The projection must emit something it should not, and the tripwire must fail to catch it.
-    Either failure alone is recoverable. Both failing together is the actual threat model, and
-    designing for it means no single point of failure controls the outcome.
+    The first is an <strong>allowlist projection</strong>, which does not exist today. Each
+    field in the inventory would carry a publication status; fields marked publishable would
+    cross the boundary and all others would not exist in the build context. The point of a projection rather than a redaction is
+    that a redaction is a scrub that can be done wrong, while a projection only ever emits
+    what is explicitly named. Adding a field to the inventory would keep it private by
+    default until an author deliberately marked it otherwise: fail-closed, not fail-open.
   </p>
+
+  <p>
+    The second is an independent <strong>tripwire</strong> over the build output, which does
+    not exist either — a scan for anything secret-shaped that would run after the projection
+    and before the site is assembled, failing the build on a match. Its value is that it is not the projection. Two mechanisms
+    would have to fail together for a secret to reach the public, and neither one's authors
+    can talk the other out of its verdict.
+  </p>
+
+  <Callout tone="publish" label="Status of this boundary">
+    <p>
+      Neither the projection nor the tripwire exists today. No field in
+      <code>inventory.yaml</code> carries a publication marker, no generator emits a public
+      projection, and this repository's build runs no output scan. The safety property this
+      page claims rests entirely on the fact that <em>no lab data is imported here at all</em>
+      — which is airtight while it holds, and stops holding on the day someone wires the
+      inventory in. That is the day the two mechanisms above have to exist, and the reason
+      they are described here as a commitment rather than an accomplishment.
+    </p>
+  </Callout>
 
   <h2>Static by construction</h2>
 
   <p>
-    The public build never sees <code>inventory.yaml</code>. The build toolchain receives only
-    the pre-sanitized output of the projection step: a curated data structure whose contents
-    were already verified by the tripwire. There is no configuration to tweak, no environment
-    variable to expose, no code path that would cause raw inventory data to flow downstream.
-    The build is one-way. Air-gap here means not that secrets are locked up tightly, but that
-    the path that would carry them does not exist.
+    What ships is a fully static build: compiled HTML, CSS, and JavaScript. No server, no
+    database, no server-side rendering touching live data. There is no runtime connection to
+    the lab, no webhook listening for state changes, no endpoint that reflects anything
+    internal. The pipeline terminates at publication. It does not reach back.
   </p>
 
   <p>
-    What ships is a fully static build: compiled HTML, CSS, and JavaScript. No server, no
-    database, no server-side rendering touching live data. There is no runtime connection to
-    the lab, no webhook listening for state changes, no endpoint that reflects anything internal.
-    The pipeline terminates at publication. It does not reach back.
+    That property does not depend on the two mechanisms above and will survive them. Whatever
+    eventually crosses this boundary crosses it once, at build time, in one direction, and
+    arrives as inert text.
   </p>
 
   <Callout tone="publish" label="You are here">
     <p>
       This site is Boundary III. It exists because the other two boundaries work: the
-      <a href="/single-source-of-truth">single source of truth</a> in Describe generates the
-      data, and the projection plus tripwire decide what crosses. The lab has considerably more
-      state than what is visible here. What is not visible is not hidden behind this page. It
-      was never sent to it. See the <a href="/colophon">colophon</a> for how the build
-      pipeline is assembled.
+      <a href="/single-source-of-truth">single source of truth</a> in Describe holds the
+      facts, and <a href="/operate">Operate</a> acts on them under a ceiling it cannot
+      exceed. The lab has considerably more state than what is described here. What is not
+      described is not hidden behind this page. It was never sent to it. See the
+      <a href="/colophon">colophon</a> for how the build pipeline is assembled.
     </p>
   </Callout>
 </ContentPage>

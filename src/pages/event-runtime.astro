@@ -13,10 +13,12 @@ import Chips from "../components/Chips.astro";
 >
   <p>
     Inside the <a href="/operate">Operate</a> layer, side effects are not a byproduct — they are
-    the point. Every action the agent takes, every signal the infrastructure emits, every approval
-    gate that opens or closes: all of it flows through a single event backbone built on NATS. Not
-    because the technology is fashionable, but because an append-only, subject-routed message system
-    is the natural shape of a lab that needs to know what happened, when, and in what order.
+    the point. Every action the agent takes and every approval gate that opens or closes reaches a
+    single event backbone built on NATS, alongside the infrastructure signals that source adapters
+    are wired to carry. Not because the technology is fashionable, but because an append-only,
+    subject-routed message system is the natural shape of a lab that needs to know what happened,
+    when, and in what order. What reaches the backbone, and by which route, is the subject of the
+    rest of this page — the answer is less obvious than "everything publishes".
   </p>
 
   <h2>One backbone, many voices</h2>
@@ -24,8 +26,9 @@ import Chips from "../components/Chips.astro";
   <p>
     NATS is a lightweight publish-subscribe messaging system. In the Operate layer it fills a
     specific role: a shared nervous system through which every component can speak and listen without
-    knowing who else is in the room. The agent publishes. Source adapters publish. The audit trail
-    subscribes. The bridge subscribes. None of them are coupled to each other directly. They are
+    knowing who else is in the room. Source adapters publish. The bridge subscribes. The operator
+    ledger does neither — it is upstream of the runtime entirely, and a tailer derives one event
+    from each ledger line. None of these components are coupled to each other directly. They are
     coupled only to the subject namespace and the schema, the two contracts that give the system
     its coherence.
   </p>
@@ -85,10 +88,13 @@ import Chips from "../components/Chips.astro";
   </p>
 
   <p>
-    <strong>Auditability</strong> becomes structural rather than bolted on. The event store and the
-    append-only audit trail are not separate concerns: they reinforce each other. Every action the
-    agent takes is an event; every event is retained. There is no separate audit log to maintain
-    because the log is the audit trail. The two records are, at their core, the same record.
+    <strong>Auditability</strong> becomes structural rather than bolted on — but not by collapsing two
+    records into one. The append-only operator ledger is the sole audit authority. A dedicated tailer
+    derives exactly one replayable event from each complete ledger line, carrying that line's number
+    and a hash of its contents, and publishes it to the event store. The direction is fixed and
+    one-way: the ledger is the origin, the event stream is a mirror of it. Nothing downstream can
+    become a second origin, and a lost stream is rebuilt by replaying the ledger rather than restored
+    from a backup of itself.
   </p>
 
   <p>
@@ -107,15 +113,16 @@ import Chips from "../components/Chips.astro";
     shape of the answer.
   </p>
 
-  <PullQuote>The audit trail is not a report generated at the end. It is the event stream, read from the beginning.</PullQuote>
+  <PullQuote>The ledger is the record. The event stream is what the ledger sounds like from the outside.</PullQuote>
 
   <Callout tone="operate" label="Part of the governed-autonomy stack">
     <p>
       The event runtime does not sit beside the <a href="/governed-autonomy">governed-autonomy</a>
-      machinery — it is woven through it. Every agent action that flows through the capability
-      registry and RBAC policy also emits an event. The hard ceiling and the audit record are
-      enforced through the same governed path. Autonomy without a ledger is just automation; the event
-      backbone is what makes the autonomy governable.
+      machinery — it observes it. Every agent action that flows through the capability registry and
+      RBAC policy lands in the operator ledger, and every complete ledger line becomes an event. The
+      ceiling and the record are enforced on the governed path itself; the runtime is what carries the
+      record outward, where the rest of the lab can subscribe to it. Autonomy without a ledger is just
+      automation — and a ledger nothing can read is just a file.
     </p>
   </Callout>
 </ContentPage>
