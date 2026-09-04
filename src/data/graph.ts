@@ -139,7 +139,7 @@ export const CONCEPT_NODES: GraphNode[] = [
     label: "Connectivity",
     boundary: "operate",
     kind: "governed access",
-    summary: "Every live wire, reached only as the registry allows.",
+    summary: "Every live wire the agent touches, reached through the registry.",
     detail:
       "The live wires into the infrastructure — SSH to the compute layer, the network controller's API, the metrics store, the event runtime, and the documentation and inventory git remotes. The agent reaches each one only through a registered capability. The operator's break-glass path reaches the compute layer outside this, which is why its use is journaled and counted.",
     x: 540,

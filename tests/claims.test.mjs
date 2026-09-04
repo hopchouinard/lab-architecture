@@ -131,13 +131,23 @@ const MECHANISMS = ["tripwire", "allowlist projection", "publish projection"];
 const UNBUILT =
   "does not exist|do not exist|nor the [a-z ]*exists|neither[^.!?]{0,40}exists|not built|not yet built|designed and not|designed but not|designed, not built|neither is built|would ";
 
-/** The mechanism and an unbuilt marker inside one sentence, in either order. */
-function disclaimerFor(mechanism) {
-  const m = mechanism.replace(/ /g, "\\s+");
-  return new RegExp(
-    `((${m})[^.!?]{0,200}(${UNBUILT}))|((${UNBUILT})[^.!?]{0,200}(${m}))`,
-    "i",
-  );
+/** An unbuilt marker anywhere in the same sentence as the mechanism. */
+const UNBUILT_RE = new RegExp(UNBUILT, "i");
+
+/** Sentences, roughly. Good enough: the unit is "one claim". */
+function sentences(text) {
+  return text.split(/(?<=[.!?])\s+/);
+}
+
+/**
+ * EVERY sentence naming the mechanism must disclaim it — not merely one
+ * somewhere on the page. "The tripwire does not exist. The tripwire protects
+ * every build." has a valid disclaimer and a live false claim, and a
+ * one-match-per-page rule accepts it.
+ */
+function undisclaimedSentences(text, mechanism) {
+  const m = new RegExp(mechanism.replace(/ /g, "\\s+"), "i");
+  return sentences(text).filter((s) => m.test(s) && !UNBUILT_RE.test(s));
 }
 
 test("every unbuilt mechanism a page names is disclaimed in the same sentence", () => {
@@ -146,11 +156,11 @@ test("every unbuilt mechanism a page names is disclaimed in the same sentence", 
   // with no disclaimer at all.
   for (const { name, text } of [...pages, ...built.filter((f) => f.name.endsWith(".html"))]) {
     for (const mechanism of MECHANISMS) {
-      if (!new RegExp(mechanism.replace(/ /g, "\\s+"), "i").test(text)) continue;
-      assert.match(
-        text,
-        disclaimerFor(mechanism),
-        `${name} names "${mechanism}" without saying, in the same sentence, that it is unbuilt`,
+      const bad = undisclaimedSentences(text, mechanism);
+      assert.deepEqual(
+        bad,
+        [],
+        `${name} names "${mechanism}" in ${bad.length} sentence(s) that do not say it is unbuilt: ${JSON.stringify(bad.slice(0, 2))}`,
       );
     }
 
@@ -194,6 +204,10 @@ test("no page claims this site is generated from the inventory", () => {
     // in the first correction and was caught in review, not by this guard.
     /public site[^.!?]{0,160}(rendered differently|the same fact)/i,
     /(this|the public) site is[^.!?]{0,80}(generated|derived|projected) from/i,
+    // The same relationship stated the other way round. Checking one
+    // direction only leaves "inventory.yaml generates this site" green.
+    /inventory\.yaml[^.!?]{0,80}(generates|feeds|produces|renders|drives)[^.!?]{0,40}(this|the public) site/i,
+    /(the )?inventory[^.!?]{0,60}(is projected|projects)[^.!?]{0,40}(into|onto|to) (this|the public) site/i,
   ];
   for (const { name, text } of [...pages, ...built]) {
     for (const pattern of retired) {
