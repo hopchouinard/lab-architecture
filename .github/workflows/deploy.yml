@@ -3,15 +3,20 @@ name: Deploy to Cloudflare Pages
 # Push-to-deploy: every push to main builds the site and deploys it to the
 # `patchoutech-architecture` Cloudflare Pages project.
 #
-# Requires two repo secrets:
+# Requires two repo secrets, both set since 2026-06-28:
 #   CLOUDFLARE_API_TOKEN  — a scoped token with Account > Cloudflare Pages > Edit
 #   CLOUDFLARE_ACCOUNT_ID — the Cloudflare account id
 #
-# Until CLOUDFLARE_API_TOKEN is set, the build still runs (as CI) and the deploy
-# step is skipped — no red failures while the token is pending.
+# If either is ever absent the build still runs (as CI) and only the deploy step
+# is skipped, so a missing secret reads as a skipped deploy rather than a red
+# build. The token-presence check below is what makes that true.
 
 on:
   push:
+    branches: [main]
+  # Pull requests build and test but never deploy, so the claim guards run
+  # BEFORE a correction is merged rather than after it has already shipped.
+  pull_request:
     branches: [main]
   workflow_dispatch: {}
 
@@ -51,7 +56,8 @@ jobs:
           fi
 
       - name: Deploy to Cloudflare Pages
-        if: steps.token.outputs.present == 'true'
+        # Never on pull_request: a PR must not be able to publish to production.
+        if: steps.token.outputs.present == 'true' && github.event_name != 'pull_request'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
