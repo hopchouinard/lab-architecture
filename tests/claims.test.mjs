@@ -136,7 +136,10 @@ function disclaimerFor(mechanism) {
 }
 
 test("every unbuilt mechanism a page names is disclaimed in the same sentence", () => {
-  for (const { name, text } of pages) {
+  // Source AND rendered output: a mechanism named by an imported component
+  // reaches the reader, and checking only route source would let it through
+  // with no disclaimer at all.
+  for (const { name, text } of [...pages, ...built.filter((f) => f.name.endsWith(".html"))]) {
     for (const mechanism of MECHANISMS) {
       if (!new RegExp(mechanism.replace(/ /g, "\\s+"), "i").test(text)) continue;
       assert.match(
@@ -163,10 +166,16 @@ test("every unbuilt mechanism a page names is disclaimed in the same sentence", 
   for (const id of ["allowlist", "tripwire"]) {
     const node = graph.match(new RegExp(`id:\\s*"${id}"[\\s\\S]{0,700}?\\n  \\}`));
     assert.ok(node, `graph.ts no longer has a node with id "${id}" — update this guard`);
-    assert.match(
-      node[0],
-      /designed, not built/,
-      `graph.ts node "${id}" must carry kind: "designed, not built"`,
+
+    // The `kind` field specifically: Explorer.tsx renders it as the node's
+    // visible tag, and a match anywhere in the object would stay green while
+    // kind was flipped back and the label survived only in `detail`.
+    const kind = node[0].match(/kind:\s*"([^"]*)"/);
+    assert.ok(kind, `graph.ts node "${id}" has no kind field — update this guard`);
+    assert.equal(
+      kind[1],
+      "designed, not built",
+      `graph.ts node "${id}" must carry kind: "designed, not built" — the explorer renders this field`,
     );
   }
 });

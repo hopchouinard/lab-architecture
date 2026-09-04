@@ -12,15 +12,22 @@ name: Deploy to Cloudflare Pages
 # build. The presence check below is what makes that true, and it checks BOTH —
 # checking only the token would let an empty account id reach the deploy.
 
-# Deliberately NOT triggered by pull_request. Same-repo pull requests receive
-# repository secrets, and an `if:` on the deploy step is not a security boundary
-# because the PR can edit that condition, or an earlier step, in the same diff.
-# PR validation runs credential-free in ci.yml; this workflow — the only one
-# holding the Cloudflare token — fires only on a push that has already landed.
+# This is the ONLY workflow that touches the Cloudflare credentials, and its
+# trigger list is deliberately one line long.
+#
+# Not `pull_request`: same-repo pull requests receive repository secrets, and an
+# `if:` on the deploy step is not a boundary because the PR can edit that
+# condition, or any earlier step, in the same diff the workflow then runs. PR
+# validation lives in ci.yml, which references no secret at all.
+#
+# Not `workflow_dispatch` either: `gh workflow run --ref <branch>` runs the
+# workflow file *as it exists on that ref*, so anyone able to dispatch could
+# select a PR branch carrying an edited version of this file and reach the
+# token with it. A manual re-deploy is an empty commit on main, which is a
+# push, which is already covered.
 on:
   push:
     branches: [main]
-  workflow_dispatch: {}
 
 jobs:
   deploy:
@@ -69,7 +76,7 @@ jobs:
           fi
 
       - name: Deploy to Cloudflare Pages
-        if: steps.token.outputs.present == 'true'
+        if: steps.token.outputs.present == 'true' && github.ref == 'refs/heads/main'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
