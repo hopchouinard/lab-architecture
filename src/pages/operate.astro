@@ -78,11 +78,13 @@ import Callout from "../components/Callout.astro";
   <p>
     Operate's live wires have grown with it: SSH to the compute layer, the UniFi management
     API, the metrics store behind the power-status read, the event runtime, and the git
-    remotes behind the documentation corpus and the inventory. Every one of them is reached
-    through a registered capability and nothing else. They share the same governance surface
-    — the same ceiling, the same approval policy, the same ledger entry — so adding a wire
-    does not add a way around the gate; it adds another verb that must pass through it.
-    There is no side channel: every action taken on infrastructure is accounted for.
+    remotes behind the documentation corpus and the inventory. The agent reaches every one of
+    them through a registered capability and by no other means. They share the same governance
+    surface — the same ceiling, the same approval policy, the same ledger entry — so adding a
+    wire does not add a way around the gate; it adds another verb that must pass through it.
+    The agent has no side channel: every action it takes on infrastructure is accounted for.
+    The operator's break-glass path above reaches the compute layer outside all of this, which
+    is exactly why its use is counted rather than merely permitted.
   </p>
 
   <p>

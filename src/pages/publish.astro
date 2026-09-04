@@ -18,6 +18,15 @@ import Callout from "../components/Callout.astro";
     inventory that architecture is built around.
   </p>
 
+  <p>
+    That is a claim about the pipeline, and it should not be read as a stronger one. Nothing
+    here can leak <em>by ingestion</em>: no automated path carries a hostname, an address or a
+    credential from the lab into this build. It does not follow that nothing can leak at all.
+    An author who types a real identifier into a page ships it, because the build compiles what
+    it is given and nothing scans the result. Hand-authoring moves the risk from a mechanism to
+    a person; the tripwire described below is what would move it back.
+  </p>
+
   <h2>Nothing crossed, so nothing had to be caught</h2>
 
   <p>

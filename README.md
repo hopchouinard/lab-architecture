@@ -37,12 +37,21 @@ chaining.
 
 ```sh
 npm ci
-npm run dev      # http://localhost:4321
 npm run build    # emits dist/
 npm test         # node:test assertions over the built dist/
 ```
 
 `npm test` reads `dist/`, so run `npm run build` before it.
+
+For the dev server, `AGENTS.md` requires background mode — `npm run dev` runs
+`astro dev` in the foreground and blocks the shell:
+
+```sh
+npx astro dev --background
+npx astro dev status
+npx astro dev logs
+npx astro dev stop
+```
 
 If you invoke npm from outside the project root, use `npm --prefix
 /path/to/lab-architecture run build` — the scripts resolve their paths from the
