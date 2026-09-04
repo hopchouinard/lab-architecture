@@ -39,9 +39,22 @@ import Callout from "../components/Callout.astro";
   <p>
     At the center of Operate is the <strong>capability registry</strong>: an allowlist of
     every operation the agent may ever attempt. Anything not on the list is not blocked by
-    a policy — it is simply uncallable. There is no override, no privileged path, no
-    emergency bypass that skirts the registry. It defines the outer bound of autonomy, and
-    that bound is structural.
+    a policy — it is simply uncallable. For the agent there is no override, no privileged
+    path and no emergency bypass: raw shell, raw service-API passthrough and raw secret
+    access are not capabilities, and the tier reserved for destructive work returns a
+    runbook rather than executing anything. The registry defines the outer bound of
+    autonomy, and that bound is structural.
+  </p>
+
+  <p>
+    There is exactly one path around it, and it belongs to the operator, not the agent:
+    running the maintenance playbooks by hand. That path is not a loophole left open by
+    accident — it is <strong>declared, journaled and counted</strong>. Every use writes a
+    dated break-glass entry, and the health check tallies those entries as a first-class
+    signal. The lab's own migration gate requires four consecutive weekly cycles with a
+    break-glass count of zero before the governed loop is considered steady. An escape
+    hatch that is measured, and whose use visibly sets a clock back, is a different object
+    from one that is merely discouraged.
   </p>
 
   <p>
@@ -63,18 +76,25 @@ import Callout from "../components/Callout.astro";
   <h2>Governed connectivity and the inventory interface</h2>
 
   <p>
-    The two live wires in Operate are SSH access to the compute layer and the UniFi
-    management API. Both flow through the same governance surface: the same capability
-    ceiling, the same approval policy, the same audit record. There is no side channel;
-    every action taken on infrastructure is accounted for.
+    Operate's live wires have grown with it: SSH to the compute layer, the UniFi management
+    API, the metrics store behind the power-status read, the event runtime, and the git
+    remotes behind the documentation corpus and the inventory. Every one of them is reached
+    through a registered capability and nothing else. They share the same governance surface
+    — the same ceiling, the same approval policy, the same ledger entry — so adding a wire
+    does not add a way around the gate; it adds another verb that must pass through it.
+    There is no side channel: every action taken on infrastructure is accounted for.
   </p>
 
   <p>
     The inventory interface is a deliberately narrow seam. Operate reads the lab's physical
     and logical state from <code>inventory.yaml</code> through Describe's
     <code>load_inventory()</code> entry point, the same function every other consumer uses.
-    It does not maintain its own copy. It does not shadow or fork the data. One source of
-    truth means one source of truth.
+    Where the runtime is deployed away from the full Describe checkout it reads a sparse
+    checkout of that same repository — refreshed from it, never edited in place, and with
+    write authority over the inventory pinned shut wherever such a copy is in use. It does
+    not author its own host list, its own service registry, or its own issue tracker. One
+    source of truth means one source of truth; a second working copy of the same file is a
+    deployment detail, not a second source.
   </p>
 
   <Callout tone="operate" label="The describe–operate contract">

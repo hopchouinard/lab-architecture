@@ -11,41 +11,38 @@ import Chips from "../components/Chips.astro";
   stand="The publish boundary, practicing what it documents."
 >
   <p>
-    This site is the third boundary in the lab's three-boundary model: it publishes a
-    redacted projection of the infrastructure that anyone can read, without exposing
-    anything the other two boundaries guard. That is not just a design goal. It is
-    enforced at build time, in two independent steps that must both pass before a build
-    can ship.
+    This site is the third boundary in the lab's three-boundary model: it describes the
+    infrastructure for anyone to read, without exposing anything the other two boundaries
+    guard. Today that property comes from the bluntest mechanism available — the lab's
+    data is not sent here, so there is nothing to expose.
   </p>
 
-  <h2>Built on its own principles</h2>
+  <h2>Built by hand, on purpose</h2>
 
   <p>
-    The physical-layer data visible in the <a href="/explorer">interactive explorer</a>
-    originates in the same <code>inventory.yaml</code> that serves as the single source
-    of truth in the <a href="/describe">Describe</a> boundary. It never crosses the
-    boundary raw. An allowlist projection runs first, emitting only the fields explicitly
-    marked as publishable. Everything else defaults to private. The projection is
-    fail-closed: an untagged field does not appear in the output; it is absent.
+    The pages you are reading are hand-authored Astro components. So is the physical layer
+    of the <a href="/explorer">interactive explorer</a>: a curated graph of generic aliases
+    that shows the architecture's shape without naming a single real host, address, or
+    identifier. It does not originate in <code>inventory.yaml</code>, and
+    <code>src/data/graph.ts</code> says so in its opening comment.
   </p>
 
-  <Callout tone="publish" label="The tripwire">
+  <Callout tone="publish" label="What is not here yet">
     <p>
-      An independent scan then runs over the compiled output looking for anything
-      secret-shaped: IP addresses, credential-like strings, host-specific identifiers.
-      If it finds a match, the build exits non-zero and the site does not ship. This is
-      not documentation of intent — it is a hard gate. The tripwire runs after the
-      allowlist projection, so even a bug in the projection cannot silently produce a
-      clean build. Both checks must pass. See <a href="/publish">Publish</a> for the
-      full boundary design.
+      The <a href="/publish">Publish</a> boundary is designed around two mechanisms — an
+      allowlist projection that emits only fields explicitly marked publishable, and an
+      independent tripwire that scans build output for anything secret-shaped and fails the
+      build on a match. <strong>Neither is built.</strong> No inventory field carries a
+      publication marker and this repository's build runs no output scan. They are the
+      prerequisite for ever feeding this site real lab data, not a description of what
+      guards it today.
     </p>
   </Callout>
 
   <p>
-    The public build never receives <code>inventory.yaml</code> directly. By the time
-    the Astro compiler sees any lab data, it is pre-sanitized JSON that has already
-    cleared the allowlist projection and the tripwire. There is no code path in this
-    site that reads the source file.
+    The public build never receives <code>inventory.yaml</code>, directly or indirectly.
+    There is no code path in this site that reads the source file, and no generated
+    artifact from the Describe boundary is checked in here.
   </p>
 
   <h2>The stack</h2>
@@ -58,12 +55,12 @@ import Chips from "../components/Chips.astro";
 
   <p>
     The one interactive piece is the infrastructure explorer, a React Flow island
-    client-hydrated from a sanitized JSON payload that is generated as part of the same
-    build pipeline. The island runs entirely in the browser and makes no requests to any
-    lab system. It is interactive in the UI sense; it is inert in the network sense.
+    client-hydrated from a graph module compiled into the bundle. The island runs entirely
+    in the browser and makes no requests to any lab system. It is interactive in the UI
+    sense; it is inert in the network sense.
   </p>
 
-  <Chips items={["Astro 7", "React Flow", "allowlist export", "tripwire", "static HTML"]} />
+  <Chips items={["Astro 7", "React Flow", "hand-authored graph", "static HTML"]} />
 
   <h2>The design system</h2>
 
@@ -90,9 +87,9 @@ import Chips from "../components/Chips.astro";
   <p>
     The site carries no live data. Nothing it displays changes after the build runs.
     There is no polling loop, no webhook listener, no cron job refreshing a feed from the
-    lab. The explorer's graph is a curated representation today; when the allowlist
-    generator is wired in, its physical layer will be derived from the same inventory as
-    everything else.
+    lab. The explorer's graph is a curated representation; if the allowlist generator is
+    ever built, its physical layer could be derived from the same inventory as everything
+    else — and the tripwire would have to be built in the same breath.
   </p>
 
   <p>
@@ -103,6 +100,8 @@ import Chips from "../components/Chips.astro";
   </p>
 
   <p>
-    The site cannot leak the lab's secrets. They were never compiled into it.
+    The site cannot leak the lab's secrets. They were never compiled into it — and while
+    that remains true by absence rather than by filter, it is worth saying plainly rather
+    than dressing it up as a pipeline.
   </p>
 </ContentPage>

@@ -32,6 +32,11 @@ jobs:
 
       - run: npm run build
 
+      # The suite asserts over dist/, so it runs after the build and before the
+      # deploy: a page that revives a retired claim fails here rather than
+      # shipping. See tests/claims.test.mjs for why each guard exists.
+      - run: npm test
+
       # Read the secret into an env var (safe pattern) and check it's present.
       - name: Check for deploy token
         id: token

@@ -6,10 +6,15 @@ import { join } from "node:path";
 const distDir = new URL("../dist", import.meta.url).pathname;
 const html = readFileSync(join(distDir, "index.html"), "utf8");
 
-// Find the bundled CSS file produced by Astro's build
+// Concatenate every stylesheet Astro emitted. The bundle filenames are derived
+// from whichever component owns the styles and change when the component graph
+// changes, so matching one by name (it used to be `index.*.css`) makes the
+// suite fail for a reason that has nothing to do with the site.
 const astroDir = join(distDir, "_astro");
-const cssFile = readdirSync(astroDir).find((f) => f.endsWith(".css") && f.startsWith("index."));
-const css = readFileSync(join(astroDir, cssFile), "utf8");
+const css = readdirSync(astroDir)
+  .filter((f) => f.endsWith(".css"))
+  .map((f) => readFileSync(join(astroDir, f), "utf8"))
+  .join("\n");
 
 test("overview page renders the brand and sidebar nav", () => {
   assert.match(html, /Patchoutech/);
@@ -24,4 +29,8 @@ test("overview page renders the thesis hero copy", () => {
 
 test("overview page applies the copper accent token", () => {
   assert.match(css, /#cf7e38/);
+});
+
+test("at least one stylesheet was emitted", () => {
+  assert.ok(css.length > 0, "no CSS found in dist/_astro");
 });
