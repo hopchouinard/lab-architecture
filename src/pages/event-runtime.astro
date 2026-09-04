@@ -13,10 +13,12 @@ import Chips from "../components/Chips.astro";
 >
   <p>
     Inside the <a href="/operate">Operate</a> layer, side effects are not a byproduct — they are
-    the point. Every action the agent takes, every signal the infrastructure emits, every approval
-    gate that opens or closes: all of it flows through a single event backbone built on NATS. Not
-    because the technology is fashionable, but because an append-only, subject-routed message system
-    is the natural shape of a lab that needs to know what happened, when, and in what order.
+    the point. Every action the agent takes and every approval gate that opens or closes reaches a
+    single event backbone built on NATS, alongside the infrastructure signals that source adapters
+    are wired to carry. Not because the technology is fashionable, but because an append-only,
+    subject-routed message system is the natural shape of a lab that needs to know what happened,
+    when, and in what order. What reaches the backbone, and by which route, is the subject of the
+    rest of this page — the answer is less obvious than "everything publishes".
   </p>
 
   <h2>One backbone, many voices</h2>

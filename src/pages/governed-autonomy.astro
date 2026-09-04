@@ -83,9 +83,11 @@ import StatRow from "../components/StatRow.astro";
     The audit trail serves two purposes. Operationally, it is the post-hoc record that
     makes autonomous action reviewable — not just "did something happen" but the full
     provenance of why and how. Architecturally, it closes the loop: the system that
-    executes actions is the system that records them, with no gap between the two. Every
-    action that can happen is logged; every log entry corresponds to an action that was
-    permitted.
+    executes actions is the system that records them, with no gap between the two.
+    Crucially, the record is not a list of things that worked. An entry carries one of four
+    outcomes — succeeded, failed, staged for a human, or blocked — and the refusals are the
+    entries worth reading. A ledger containing only successes would be describing a system
+    that had never been tested.
   </p>
 
   <h2>The chain in operation</h2>

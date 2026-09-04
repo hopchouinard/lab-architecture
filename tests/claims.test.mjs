@@ -96,6 +96,11 @@ test("the retired audit-trail claim does not come back", () => {
     /the log is the audit trail/i,
     /no separate audit log/i,
     /the two records are.{0,20}the same record/i,
+    // The ledger records refusals too. Verified against the live ledger on
+    // 2026-09-04: 63 success, 25 failure, 2 staged, 2 blocked. Any wording
+    // that equates a log entry with a permitted action denies 27 of them.
+    /every log entry corresponds to an action that was permitted/i,
+    /(log|ledger|audit trail)[^.!?]{0,60}only (contains|records|holds) (successful|permitted)/i,
   ];
   for (const { name, text } of [...pages, ...built]) {
     for (const pattern of retired) {
