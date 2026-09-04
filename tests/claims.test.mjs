@@ -46,6 +46,48 @@ const pages = collectPages(pagesDir);
 
 const graph = readFileSync(join(srcDir, "data", "graph.ts"), "utf8");
 
+// The published corpus: what a reader actually receives, not what a route file
+// happens to contain. A route that renders prose from a component or a data
+// module ships that prose, and a source-only scan never opens either — so a
+// retired claim could pass the gate and still appear on the page. Every
+// "must not appear" guard runs over this; the source scan stays for the checks
+// that need per-file attribution and structure.
+const distDir = new URL("../dist", import.meta.url).pathname;
+
+function collectBuilt(dir) {
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...collectBuilt(full));
+    } else if (/\.html$/i.test(entry.name)) {
+      // Tags stripped and whitespace collapsed: the prose wraps <strong> and
+      // <code> mid-sentence, and a sentence-scoped regex must see the sentence.
+      const text = readFileSync(full, "utf8")
+        .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/\s+/g, " ");
+      out.push({ name: relative(distDir, full), text });
+    } else if (/\.js$/i.test(entry.name)) {
+      // The explorer's graph ships inside the client bundle, so its node prose
+      // is published text even though no HTML file contains it at build time.
+      out.push({ name: relative(distDir, full), text: readFileSync(full, "utf8") });
+    }
+  }
+  return out;
+}
+
+const built = collectBuilt(distDir);
+
+test("the build produced a corpus to check", () => {
+  assert.ok(
+    built.some((f) => f.name.endsWith(".html")),
+    "no built HTML found in dist/ — run `npm run build` first; an empty corpus makes every guard below vacuous",
+  );
+});
+
 test("the retired audit-trail claim does not come back", () => {
   // agent-ops derives events FROM the operator ledger; the ledger is the sole
   // audit authority and the stream is a one-way mirror of it. Any wording that
@@ -55,7 +97,7 @@ test("the retired audit-trail claim does not come back", () => {
     /no separate audit log/i,
     /the two records are.{0,20}the same record/i,
   ];
-  for (const { name, text } of pages) {
+  for (const { name, text } of [...pages, ...built]) {
     for (const pattern of retired) {
       assert.doesNotMatch(text, pattern, `${name} revives a retired audit-trail claim: ${pattern}`);
     }
@@ -104,6 +146,9 @@ test("every unbuilt mechanism a page names is disclaimed in the same sentence", 
       );
     }
 
+  }
+
+  for (const { name, text } of built) {
     for (const pattern of RUNNING_MECHANISM) {
       assert.doesNotMatch(
         text,
@@ -136,7 +181,7 @@ test("no page claims this site is generated from the inventory", () => {
     /public site[^.!?]{0,160}(rendered differently|the same fact)/i,
     /(this|the public) site is[^.!?]{0,80}(generated|derived|projected) from/i,
   ];
-  for (const { name, text } of pages) {
+  for (const { name, text } of [...pages, ...built]) {
     for (const pattern of retired) {
       assert.doesNotMatch(text, pattern, `${name} claims generated provenance the site does not have: ${pattern}`);
     }
