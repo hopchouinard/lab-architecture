@@ -201,6 +201,59 @@ test("a dotfile is scanned by its full name, not a missing extension", () => {
   assert.equal(findings[0].rule, "credential-assignment");
 });
 
+test("a build of .htm pages is scanned, not rejected as pageless", () => {
+  // The structural check demanded ".html" while classification accepted
+  // .htm/.xhtml, so this dist was scanned and THEN failed as "no built HTML".
+  const dir = fixture({ "index.htm": "<p>ssh to 172.31.255.254</p>" });
+  const { code, findings } = run(dir, BASELINE);
+  assert.equal(code, 1);
+  assert.equal(findings[0].rule, "rfc1918-ipv4");
+});
+
+test("an .xhtml page also counts as a page", () => {
+  const dir = fixture({ "index.xhtml": "<p>clean</p>" });
+  assert.equal(run(dir, BASELINE).code, 0);
+});
+
+test("the CLI does not print matched secrets by default", () => {
+  // This scan runs in GitHub Actions on a PUBLIC repo: printing a real match
+  // would copy the secret into a world-readable log.
+  const dir = fixture({ "index.html": "<p>ssh to 172.31.255.254</p>" });
+  const lines = [];
+  const realError = console.error;
+  const realEnv = process.env.SCAN_SHOW_MATCHES;
+  console.error = (...a) => lines.push(a.join(" "));
+  try {
+    delete process.env.SCAN_SHOW_MATCHES;
+    assert.equal(main([dir, BASELINE]), 1);
+  } finally {
+    console.error = realError;
+    if (realEnv === undefined) delete process.env.SCAN_SHOW_MATCHES;
+    else process.env.SCAN_SHOW_MATCHES = realEnv;
+  }
+  const out = lines.join("\n");
+  assert.ok(!out.includes("172.31.255.254"), `CLI leaked the match: ${out}`);
+  assert.match(out, /redacted/);
+  assert.match(out, /rfc1918-ipv4/, "the rule and file must still be reported");
+});
+
+test("SCAN_SHOW_MATCHES=1 reveals the match, so a baseline entry can be written", () => {
+  const dir = fixture({ "index.html": "<p>ssh to 172.31.255.254</p>" });
+  const lines = [];
+  const realError = console.error;
+  const realEnv = process.env.SCAN_SHOW_MATCHES;
+  console.error = (...a) => lines.push(a.join(" "));
+  try {
+    process.env.SCAN_SHOW_MATCHES = "1";
+    main([dir, BASELINE]);
+  } finally {
+    console.error = realError;
+    if (realEnv === undefined) delete process.env.SCAN_SHOW_MATCHES;
+    else process.env.SCAN_SHOW_MATCHES = realEnv;
+  }
+  assert.match(lines.join("\n"), /172\.31\.255\.254/);
+});
+
 test("a missing dist fails closed, not green", () => {
   assert.equal(run(join(tmpdir(), "definitely-not-here-42"), BASELINE).code, 2);
 });

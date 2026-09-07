@@ -48,6 +48,12 @@ export const DEFAULT_BASELINE = join(HERE, "scan-baseline.json");
 // and it scans clean today (verified against the real build). Fonts are not
 // that class — they arrive through the bundler from node_modules, no author
 // edits one, and they are an order of magnitude larger — so they stay denied.
+// One definition, used both to decide a file is an HTML page worth rendering
+// AND to decide dist/ contains any pages at all. They disagreed: the structural
+// check demanded ".html" while everything else accepted .htm/.xhtml, so a build
+// of only .htm pages was scanned and then failed as "no built HTML".
+const HTML_EXT = /\.x?html?$/i;
+
 const SCANNED_EXT = new Set([
   ".html", ".htm", ".xhtml", ".js", ".mjs", ".cjs", ".css", ".json", ".map",
   ".svg", ".txt", ".xml", ".md", ".markdown", ".mdx", ".yaml", ".yml",
@@ -165,7 +171,7 @@ function applyRules(file, text, into, seen) {
   }
 }
 
-export function scanText(file, text, { html = /\.x?html?$/i.test(file) } = {}) {
+export function scanText(file, text, { html = HTML_EXT.test(file) } = {}) {
   const findings = [];
   const seen = new Set();
   applyRules(file, text, findings, seen);
@@ -209,7 +215,7 @@ export function run(distDir = DEFAULT_DIST, baselinePath = DEFAULT_BASELINE) {
     return { code: 2, findings: [], scanned: 0,
       reason: `no scannable files under ${distDir}.` };
   }
-  if (!files.some((f) => f.toLowerCase().endsWith(".html"))) {
+  if (!files.some((f) => HTML_EXT.test(f))) {
     return { code: 2, findings: [], scanned: files.length,
       reason: `no built HTML under ${distDir}; a scan over no pages reports green.` };
   }
@@ -248,7 +254,19 @@ export function main(argv = process.argv.slice(2)) {
     console.error(`scan-dist: FAIL-CLOSED — ${reason}`);
   } else if (code === 1) {
     console.error(`scan-dist: ${findings.length} secret-shaped string(s):`);
-    for (const f of findings) console.error(`  ${f.file}: [${f.rule}] ${f.match}`);
+    // The match is NOT printed by default. This scan runs in GitHub Actions on a
+    // PUBLIC repository, so echoing a real secret here would copy it into a
+    // world-readable log — amplifying the exposure the scan exists to prevent.
+    // The rule and the file are enough to find it; SCAN_SHOW_MATCHES=1 prints
+    // the literal text locally, which is how a baseline entry gets written.
+    const reveal = process.env.SCAN_SHOW_MATCHES === "1";
+    for (const f of findings) {
+      const shown = reveal ? f.match : `<redacted ${f.match.length} chars>`;
+      console.error(`  ${f.file}: [${f.rule}] ${shown}`);
+    }
+    if (!reveal) {
+      console.error("  (matches redacted; re-run locally with SCAN_SHOW_MATCHES=1 to see them)");
+    }
   } else {
     console.log(`scan-dist: clean — ${scanned} file(s), ${RULES.length} rules, 0 findings.`);
   }
