@@ -90,8 +90,21 @@ Exit codes:
 | Code | Meaning |
 | --- | --- |
 | 0 | Clean. Nothing secret-shaped in the build. |
-| 1 | Findings. Each is printed as `path: [rule] <redacted N chars>`. The matched text is **not** echoed: this scan runs in Actions on a public repository, and printing a real secret there would copy it into a world-readable log. Set `SCAN_SHOW_MATCHES=1` locally to reveal it — which is how a baseline entry gets written, since the baseline is exact-match. |
+| 1 | Findings. Paths are scanned as well as contents, so a leak can be a file or directory *name* — those report as `path (path)`. Each is printed as `path: [rule] <redacted N chars>`. The matched text is **not** echoed: this scan runs in Actions on a public repository, and printing a real secret there would copy it into a world-readable log. Set `SCAN_SHOW_MATCHES=1` locally to reveal it — which is how a baseline entry gets written, since the baseline is exact-match. |
 | 2 | Structural failure — missing/empty `dist/`, no built HTML, an unclassified file type, an unreadable or malformed baseline. The scan could not do its job, which is not the same as finding nothing. |
+
+**Known limits, stated rather than discovered.** The rendered-text pass decodes
+numeric character references and the named ones that can sit inside a secret
+(`&colon;`, `&period;`, `&commat;` and friends) — not all ~2200 named
+references, because Node ships no entity table and this repo takes no
+dependency. A multiline YAML block scalar (`password: |`) is matched only on its
+first line. Both are the right fix the day a dependency is acceptable; until
+then they are written down here instead of being quietly absent.
+
+A baseline entry is `rule|file|match`, scoped on purpose: a bare match would be
+a repository-wide allowlist, so approving a dependency's address would also
+permit an author to publish that same real address on a page. Bare strings still
+load, and are match-only.
 
 Exit 2 is deliberately not exit 1, so "the scan is broken" is never read as
 "the scan found nothing".

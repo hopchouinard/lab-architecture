@@ -13,6 +13,7 @@
 //
 // Exit codes: 0 clean, 1 findings, 2 structural failure (fail-closed).
 import { readFileSync, readdirSync, existsSync, realpathSync } from "node:fs";
+
 import { join, relative, extname, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -104,7 +105,9 @@ export const RULES = [
   // build. That is a rule that was wrong, not a false positive to baseline: the
   // baseline is exact-match, and a minified fragment changes every rebuild.
   { name: "credential-assignment", re: /\b(?:api[_-]?key|secret|token|password|passwd)["']?\s*[=:]\s*(?:(["'])[^"'\n]{6,}\1|[^\s"'<>,;:{}()\[\]]{8,})/gi },
-  { name: "mac-address", re: /\b(?:[0-9a-f]{2}:){5}[0-9a-f]{2}\b/gi },
+  // Colon, hyphen and Cisco dotted-triple. The rule advertises "MAC address";
+  // colon-only quietly meant "MAC addresses written one particular way".
+  { name: "mac-address", re: /\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b|\b(?:[0-9a-f]{4}\.){2}[0-9a-f]{4}\b/gi },
   // Base64/hex alphabet only (no - or _) plus mixed case plus a digit. The
   // permissive form matches CSS custom properties and asset paths; this one
   // scores zero against the real build, which is why the baseline is empty.
@@ -122,12 +125,16 @@ const isHighEntropy = (s) => /[a-z]/.test(s) && /[A-Z]/.test(s) && /[0-9]/.test(
 function walk(dir) {
   const files = [];
   const unclassified = [];
+  // Recognised-binary files are not opened, but their NAMES still ship in the
+  // public URL, so they are collected rather than dropped.
+  const binaries = [];
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, e.name);
     if (e.isDirectory()) {
       const sub = walk(full);
       files.push(...sub.files);
       unclassified.push(...sub.unclassified);
+      binaries.push(...sub.binaries);
       continue;
     }
     // extname(".env") is "" — a dotfile's whole name IS its extension for our
@@ -138,9 +145,10 @@ function walk(dir) {
     const lower = e.name.toLowerCase();
     const ext = extname(lower) || (lower.startsWith(".") ? lower : "");
     if (SCANNED_EXT.has(ext)) files.push(full);
-    else if (!KNOWN_BINARY_EXT.has(ext)) unclassified.push(full);
+    else if (KNOWN_BINARY_EXT.has(ext)) binaries.push(full);
+    else unclassified.push(full);
   }
-  return { files, unclassified };
+  return { files, unclassified, binaries };
 }
 
 /**
@@ -156,29 +164,53 @@ function walk(dir) {
  * already scanned in the raw pass, and inlining it here would only duplicate
  * findings.
  */
-function renderedText(html) {
-  return html
-    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
+function decodeEntities(text) {
+  return text
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
+    // Named references for the punctuation our rules key on. Node ships no HTML
+    // entity table and this repo takes no dependency, so this is the targeted
+    // set rather than all ~2200: a full decoder is the right answer the day a
+    // dependency is acceptable. Documented as a known limit in README.
+    .replace(/&colon;/gi, ":")
+    .replace(/&period;|&dot;/gi, ".")
+    .replace(/&commat;/gi, "@")
+    .replace(/&lowbar;/gi, "_")
+    .replace(/&sol;/gi, "/")
+    .replace(/&num;/gi, "#")
+    .replace(/&equals;/gi, "=")
+    .replace(/&excl;/gi, "!")
+    .replace(/&hyphen;|&dash;/gi, "-")
+    .replace(/&plus;/gi, "+")
     // BOTH numeric forms. Decimal alone left `password&#x3a; secret` invisible
     // while `password&#58; secret` was caught — the same string, one encoding
     // apart, and the browser renders them identically.
     .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
     .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
-    .replace(/\s+/g, " ");
+        .replace(/\s+/g, " ");
+}
+
+function renderedText(html, sep = " ") {
+  return decodeEntities(
+    html
+      .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<[^>]+>/g, sep),
+  );
 }
 
 function applyRules(file, text, into, seen) {
   for (const { name, re } of RULES) {
     for (const m of text.matchAll(re)) {
       if (name === "high-entropy-run" && !isHighEntropy(m[0])) continue;
-      const key = `${name}\u0000${m[0]}`;
+      // Whitespace-insensitive: the same secret reached through different
+      // normalizations differs only in the spaces the tag substitution left
+      // behind ("password : x" vs "password: x"), and reporting one leak
+      // four times teaches people to skim the output.
+      const key = `${name}\u0000${m[0].replace(/\s+/g, "")}`;
       if (seen.has(key)) continue;
       seen.add(key);
       into.push({ file, rule: name, match: m[0] });
@@ -186,14 +218,39 @@ function applyRules(file, text, into, seen) {
   }
 }
 
+/**
+ * Read a text file the way a browser or editor would.
+ *
+ * readFileSync(..., "utf8") on a UTF-16 file yields interleaved NULs, so a
+ * BOM-marked file containing `password: secret` scanned clean while every
+ * other tool on the machine displayed it plainly.
+ */
+function readText(full) {
+  const buf = readFileSync(full);
+  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) return buf.toString("utf16le");
+  if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) return buf.swap16().toString("utf16le");
+  return buf.toString("utf8").replace(/^\ufeff/, "");
+}
+
 export function scanText(file, text, { html = HTML_EXT.test(file) } = {}) {
   const findings = [];
   const seen = new Set();
+
+  // 1. Raw, entity-decoded. Decoding matters here and not only in the rendered
+  //    pass: `<div data-config="password&#58; secret">` hides the token in an
+  //    ATTRIBUTE, which the rendered pass deletes with the whole tag.
   applyRules(file, text, findings, seen);
-  // Second pass over the rendered text, so a token split across inline markup
-  // is caught. Deduplicated by rule+match: an unsplit secret appears in both
-  // representations and must be reported once.
-  if (html) applyRules(file, renderedText(text), findings, seen);
+  applyRules(file, decodeEntities(text), findings, seen);
+
+  if (html) {
+    // 2. Rendered with tags as SPACE — the reader's text, without joining
+    //    words that sit in separate blocks.
+    applyRules(file, renderedText(text, " "), findings, seen);
+    // 3. Rendered with tags as NOTHING — adjacency. `<span>AKIA</span><span>ABC…`
+    //    renders as one key, and pass 2 breaks it with the space it inserts.
+    //    Both are needed: neither normalization sees what the other does.
+    applyRules(file, renderedText(text, ""), findings, seen);
+  }
   return findings;
 }
 
@@ -206,9 +263,9 @@ export function run(distDir = DEFAULT_DIST, baselinePath = DEFAULT_BASELINE) {
   // "the scan found something". Every structural failure below therefore
   // RETURNS 2 rather than throwing: an uncaught throw exits 1 with a stack
   // trace, which reports a broken scanner as a leak.
-  let files, unclassified;
+  let files, unclassified, binaries;
   try {
-    ({ files, unclassified } = walk(distDir));
+    ({ files, unclassified, binaries } = walk(distDir));
   } catch (err) {
     // A `dist` path that is a file, not a directory, lands here as ENOTDIR.
     return { code: 2, findings: [], scanned: 0,
@@ -238,26 +295,43 @@ export function run(distDir = DEFAULT_DIST, baselinePath = DEFAULT_BASELINE) {
   try {
     const raw = existsSync(baselinePath)
       ? JSON.parse(readFileSync(baselinePath, "utf8")) : [];
+    // Each entry is `rule|file|match` — SCOPED, not a bare string. A match-only
+    // baseline is a repository-wide allowlist: approving a dependency's
+    // 192.168.1.1 would also permit an author to publish that same real gateway
+    // address on a page, silently, forever. Bare strings are still accepted so
+    // an older baseline keeps loading, and are treated as match-only with that
+    // weakness made explicit here rather than hidden.
     if (!Array.isArray(raw) || raw.some((x) => typeof x !== "string")) {
       return { code: 2, findings: [], scanned: files.length,
-        reason: `${baselinePath} must be a JSON array of exact-match strings.` };
+        reason: `${baselinePath} must be a JSON array of "rule|file|match" strings.` };
     }
     baseline = new Set(raw);
   } catch (err) {
     return { code: 2, findings: [], scanned: files.length,
       reason: `cannot read ${baselinePath}: ${err.message}` };
   }
+  const suppressed = (x) =>
+    baseline.has(`${x.rule}|${x.file}|${x.match}`) || baseline.has(x.match);
+
   const findings = [];
+  // Paths first: a secret can be the NAME rather than the content. A screenshot
+  // filed under a hostname-shaped directory, or AKIA….html, is exposed in the
+  // public URL while its bytes are innocent — and a binary file's bytes are
+  // never opened at all, so its path is the only thing there is to check.
+  for (const f of [...files, ...binaries]) {
+    const rel = relative(distDir, f);
+    findings.push(...scanText(`${rel} (path)`, rel, { html: false })
+      .filter((x) => !suppressed(x)));
+  }
   for (const f of files) {
     let text;
     try {
-      text = readFileSync(f, "utf8");
+      text = readText(f);
     } catch (err) {
       return { code: 2, findings: [], scanned: files.length,
         reason: `cannot read ${relative(distDir, f)}: ${err.message}` };
     }
-    findings.push(...scanText(relative(distDir, f), text)
-      .filter((x) => !baseline.has(x.match)));
+    findings.push(...scanText(relative(distDir, f), text).filter((x) => !suppressed(x)));
   }
   return { code: findings.length > 0 ? 1 : 0, findings, scanned: files.length, reason: null };
 }

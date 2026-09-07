@@ -22,9 +22,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { join, relative } from "node:path";
 
-const srcDir = new URL("../src", import.meta.url).pathname;
+const srcDir = fileURLToPath(new URL("../src", import.meta.url));
 const pagesDir = join(srcDir, "pages");
 
 // Every routable extension, discovered recursively. A flat `.astro`-only scan
@@ -61,7 +62,7 @@ const pages = collectPages(pagesDir);
 // is a claim guard with a landing-page-shaped hole in it.
 const readme = {
   name: "README.md",
-  text: readFileSync(new URL("../README.md", import.meta.url).pathname, "utf8")
+  text: readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8")
     .replace(/\s+/g, " "),
 };
 
@@ -85,7 +86,7 @@ const graphSource = { name: "src/data/graph.ts", text: graph.replace(/\s+/g, " "
 // retired claim could pass the gate and still appear on the page. Every
 // "must not appear" guard runs over this; the source scan stays for the checks
 // that need per-file attribution and structure.
-const distDir = new URL("../dist", import.meta.url).pathname;
+const distDir = fileURLToPath(new URL("../dist", import.meta.url));
 
 function collectBuilt(dir) {
   const out = [];
@@ -304,13 +305,13 @@ test("a stock-phrasing sentence asserting the projection IS wired is not mistake
 });
 
 test("both workflows run the tripwire, so the present-tense claim stays earned", () => {
-  const workflows = new URL("../.github/workflows", import.meta.url).pathname;
+  const workflows = fileURLToPath(new URL("../.github/workflows", import.meta.url));
 
   // What `npm run scan` actually runs. Asserting only that the workflows
   // invoke it leaves `"scan": "true"` green: every assertion below would pass
   // while the gate ran a command that exits 0 over nothing.
   const pkg = JSON.parse(
-    readFileSync(new URL("../package.json", import.meta.url).pathname, "utf8"));
+    readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"));
   assert.match(
     pkg.scripts.scan, /tools\/scan-dist\.mjs/,
     "package.json's scan script no longer runs the tripwire — the workflow steps below would gate nothing",

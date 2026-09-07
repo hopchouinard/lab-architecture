@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { run, main, scanText, RULES } from "../tools/scan-dist.mjs";
 
@@ -15,8 +16,8 @@ import { run, main, scanText, RULES } from "../tools/scan-dist.mjs";
 // defect, and the addresses were worse, because one of them also names the
 // management /24.
 
-const REAL_DIST = new URL("../dist", import.meta.url).pathname;
-const BASELINE = new URL("../tools/scan-baseline.json", import.meta.url).pathname;
+const REAL_DIST = fileURLToPath(new URL("../dist", import.meta.url));
+const BASELINE = fileURLToPath(new URL("../tools/scan-baseline.json", import.meta.url));
 
 function fixture(files) {
   const dir = mkdtempSync(join(tmpdir(), "tripwire-"));
@@ -280,6 +281,72 @@ test("a minified input-type map is not a credential assignment", () => {
   // it would have been wrong twice over — the rule was mistaken, and the
   // baseline is exact-match against a string that changes every rebuild.
   assert.deepEqual(scanText("x.js", "password:!0,range:!0,search:!0,tel:!0"), []);
+});
+
+test("a secret split across adjacent inline elements is caught", () => {
+  // <span>AKIA</span><span>ABC…</span> renders as one key. The tags-as-space
+  // normalization breaks it apart, so a second tags-as-nothing pass is needed;
+  // neither normalization sees what the other does.
+  const found = scanText("x.html", "<span>AKIA</span><span>ABCDEFGHIJKLMNOP</span>");
+  assert.equal(found.length, 1);
+  assert.equal(found[0].rule, "aws-access-key-id");
+});
+
+test("one secret reached by several normalizations is reported once", () => {
+  // The passes yield "password : x" and "password: x" — the same leak, differing
+  // only in the spaces a tag substitution left behind.
+  assert.equal(scanText("x.html", "<code>password</code>: <code>hunter2abcdef</code>").length, 1);
+});
+
+test("an entity-encoded secret inside an attribute is caught", () => {
+  // The rendered pass deletes the whole tag, so an attribute is invisible to it;
+  // the raw pass sees the undecoded entity. Only decoding the raw text finds it.
+  const found = scanText("x.html", '<div data-config="password&#58; hunter2abcdef"></div>');
+  assert.equal(found[0].rule, "credential-assignment");
+});
+
+test("named character references are decoded", () => {
+  assert.equal(scanText("x.html", "<p>password&colon; hunter2abcdef</p>")[0].rule,
+    "credential-assignment");
+  assert.equal(scanText("x.html", "<p>172&period;31&period;255&period;254</p>")[0].rule,
+    "rfc1918-ipv4");
+});
+
+test("MAC addresses are caught in every common notation", () => {
+  for (const mac of ["00:11:22:33:44:55", "00-11-22-33-44-55", "0011.2233.4455"]) {
+    assert.equal(scanText("x.html", mac)[0].rule, "mac-address", mac);
+  }
+});
+
+test("a secret-shaped PATH is caught, even for a file never opened", () => {
+  // The bytes are innocent; the name ships in the public URL. A binary file's
+  // content is never read, so its path is the only thing there is to check.
+  const dir = fixture({ "index.html": "<p>ok</p>", "db01.example.internal/shot.png": "binary" });
+  const { code, findings } = run(dir, BASELINE);
+  assert.equal(code, 1);
+  assert.equal(findings[0].rule, "private-use-fqdn");
+});
+
+test("a UTF-16 file is decoded before scanning", () => {
+  // readFileSync(..., "utf8") on UTF-16 yields interleaved NULs, so the file
+  // scanned clean while every editor on the machine displayed it plainly.
+  const dir = mkdtempSync(join(tmpdir(), "tripwire-"));
+  writeFileSync(join(dir, "index.html"), "<p>ok</p>");
+  writeFileSync(join(dir, "notes.txt"), Buffer.concat([
+    Buffer.from([0xff, 0xfe]), Buffer.from("password: hunter2abcdef", "utf16le")]));
+  assert.equal(run(dir, BASELINE).code, 1);
+});
+
+test("a baseline entry is scoped to its rule and file, not global", () => {
+  // A match-only baseline is a repository-wide allowlist: approving a
+  // dependency's address would also permit an author to publish that same real
+  // address on a page.
+  const dir = fixture({ "index.html": "<p>172.31.255.254</p>", "other.txt": "172.31.255.254" });
+  const bl = fixture({ "b.json": JSON.stringify(["rfc1918-ipv4|other.txt|172.31.255.254"]) });
+  const { code, findings } = run(dir, join(bl, "b.json"));
+  assert.equal(code, 1);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].file, "index.html");
 });
 
 test("a missing dist fails closed, not green", () => {
