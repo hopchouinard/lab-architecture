@@ -1,26 +1,31 @@
 // Claim guards.
 //
 // Every claim on this site is checked against the live estate before it ships.
-// Three of those checks are cheap enough to automate, and each one exists
-// because the claim it guards was published while false:
+// These are string checks over source and built output, not a substitute for
+// the claim-by-claim pass — they only stop a known-false claim from returning.
 //
 //   1. "the log is the audit trail" was ruled false on 2026-07-01, recorded as
 //      corrected on 2026-07-03, and was still serving live on 2026-09-04. A
 //      claim believed fixed is exactly the kind that nobody re-reads.
-//   2. The allowlist projection and the output tripwire are designed and not
-//      built. Any page that names them must also say so, in the same file.
-//   3. No real lab data is imported here. If that ever changes, mechanisms 1
-//      and 2 have to exist first — so the pages must stop saying they do not.
-//
-// These are string checks over source, not a substitute for the claim-by-claim
-// pass against the estate. They only stop a known-false claim from returning.
+//   2. The tripwire is BUILT and runs on every build of this site. That claim
+//      is verifiable from inside this repository, so a guard below proves it by
+//      asserting both workflows invoke it. If the step is ever removed, the
+//      page's present-tense claim goes red rather than quietly false.
+//   3. The allowlist projection is built in the DESCRIBE repository and is
+//      deliberately not wired to this site. No test here can verify code in
+//      another repo, so its sentences must carry the not-wired qualifier — an
+//      unverifiable present-tense claim is exactly the shape of the one that
+//      sat false for three months.
+//   4. No real lab data is imported here. That is still true and is still the
+//      claim that would actually cause harm, so its guard is unchanged.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { join, relative } from "node:path";
 
-const srcDir = new URL("../src", import.meta.url).pathname;
+const srcDir = fileURLToPath(new URL("../src", import.meta.url));
 const pagesDir = join(srcDir, "pages");
 
 // Every routable extension, discovered recursively. A flat `.astro`-only scan
@@ -36,7 +41,12 @@ function collectPages(dir) {
     if (entry.isDirectory()) {
       out.push(...collectPages(full));
     } else if (PAGE_EXT.test(entry.name)) {
-      out.push({ name: relative(pagesDir, full), text: readFileSync(full, "utf8") });
+      // Whitespace collapsed, same as collectBuilt below: a required phrase must
+      // not be defeated by where a line happens to wrap in source. Without this,
+      // prose is hostage to the regex instead of the other way round — a page
+      // author reflowing a paragraph could red the build for no semantic reason.
+      const text = readFileSync(full, "utf8").replace(/\s+/g, " ");
+      out.push({ name: relative(pagesDir, full), text });
     }
   }
   return out;
@@ -44,7 +54,31 @@ function collectPages(dir) {
 
 const pages = collectPages(pagesDir);
 
+// README.md is published on github.com, which makes it a page of this site by
+// every measure except the routing table. It shipped "nothing scans the
+// result" and "designed and not built" for the whole of the round that
+// corrected those exact claims on four .astro pages, because the corpus
+// stopped at src/pages/**. A claim guard that does not read the landing page
+// is a claim guard with a landing-page-shaped hole in it.
+const readme = {
+  name: "README.md",
+  text: readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8")
+    .replace(/\s+/g, " "),
+};
+
+// Everything a human writes by hand, in one corpus. Every "must not appear"
+// guard below runs over this plus the built output.
+const authored = [...pages, readme];
+
 const graph = readFileSync(join(srcDir, "data", "graph.ts"), "utf8");
+
+// graph.ts carries mechanism claims in prose — a node `detail` is published
+// text — and it ships inside the JS bundle rather than any HTML file, so the
+// source scan (src/pages/** only) and the built scan (.html only, for the
+// sentence-level guards) both missed it. Whitespace collapsed for the same
+// reason the other two corpora collapse it: a required phrase must not be
+// defeated by where a line happens to wrap.
+const graphSource = { name: "src/data/graph.ts", text: graph.replace(/\s+/g, " ") };
 
 // The published corpus: what a reader actually receives, not what a route file
 // happens to contain. A route that renders prose from a component or a data
@@ -52,7 +86,7 @@ const graph = readFileSync(join(srcDir, "data", "graph.ts"), "utf8");
 // retired claim could pass the gate and still appear on the page. Every
 // "must not appear" guard runs over this; the source scan stays for the checks
 // that need per-file attribution and structure.
-const distDir = new URL("../dist", import.meta.url).pathname;
+const distDir = fileURLToPath(new URL("../dist", import.meta.url));
 
 function collectBuilt(dir) {
   const out = [];
@@ -102,97 +136,253 @@ test("the retired audit-trail claim does not come back", () => {
     /every log entry corresponds to an action that was permitted/i,
     /(log|ledger|audit trail)[^.!?]{0,60}only (contains|records|holds) (successful|permitted)/i,
   ];
-  for (const { name, text } of [...pages, ...built]) {
+  for (const { name, text } of [...authored, ...built]) {
     for (const pattern of retired) {
       assert.doesNotMatch(text, pattern, `${name} revives a retired audit-trail claim: ${pattern}`);
     }
   }
 });
 
-// Present-indicative assertions that the projection or tripwire is running.
-// Each one is a sentence that was actually published while false, so this list
-// grows by observation rather than by imagination.
-const RUNNING_MECHANISM = [
-  /tripwire (runs|scans|then runs|fires|catches)/i,
-  /(the )?allowlist (runs|projection runs)/i,
-  /(scan|projection) then runs/i,
-  /(both checks|both guards) must (both )?pass/i,
-  /must both pass/i,
-  /it is a hard gate/i,
-  /exits non-zero and the site does not ship/i,
-  /the build fails\b/i,
-  /fails it if anything secret-shaped/i,
-];
+// The projection lives in another repository, so this suite cannot prove it
+// exists. Every sentence naming it must therefore say it is not wired to this
+// site — the same per-sentence discipline the old disclaimer guard applied,
+// pointed at the wording that is now true.
+//
+// The phrase is TWO WORDS on purpose. operate.astro and governed-autonomy.astro
+// describe the capability registry as "an allowlist of every operation the
+// agent may attempt". That mechanism exists, works, and has nothing to do with
+// this one; a bare-word match reds two correct pages, and the tempting "fix" is
+// to bolt a false disclaimer onto a true sentence.
+const PROJECTION_NAMES = ["allowlist projection", "publish projection"];
 
-// Each unbuilt mechanism is checked SEPARATELY. A page-level "some disclaimer
-// exists somewhere" match is not enough: a page naming both mechanisms can
-// disclaim one and assert the other, and the page-level form passes it.
-const MECHANISMS = ["tripwire", "allowlist projection", "publish projection"];
-const UNBUILT =
-  "does not exist|do not exist|nor the [a-z ]*exists|neither[^.!?]{0,40}exists|not built|not yet built|designed and not|designed but not|designed, not built|neither is built|would ";
-
-/** An unbuilt marker anywhere in the same sentence as the mechanism. */
-const UNBUILT_RE = new RegExp(UNBUILT, "i");
+// Deliberately narrow to alternatives that name the WIRING relationship, not
+// generic nearby-sounding phrasing. An earlier draft also accepted "no lab
+// data is imported", "never touches", and "does not reach this" — but none of
+// those say the projection itself is disconnected, and "no lab data is
+// imported" is stock phrasing that already appears elsewhere in this same
+// prose for an unrelated reason (the hand-authoring guarantee). A sentence
+// like "the allowlist projection now feeds this site directly because no lab
+// data is imported through any other channel" passed the looser form while
+// asserting exactly the false, present-tense, wired claim this guard exists
+// to prevent. A qualifier that does not mention the connection can be
+// satisfied by a sentence asserting the opposite of what it is meant to rule
+// out.
+const NOT_WIRED_RE = /\bnot wired\b|\bnot connected\b/i;
 
 /** Sentences, roughly. Good enough: the unit is "one claim". */
 function sentences(text) {
   return text.split(/(?<=[.!?])\s+/);
 }
 
-/**
- * EVERY sentence naming the mechanism must disclaim it — not merely one
- * somewhere on the page. "The tripwire does not exist. The tripwire protects
- * every build." has a valid disclaimer and a live false claim, and a
- * one-match-per-page rule accepts it.
- */
-function undisclaimedSentences(text, mechanism) {
+function unqualifiedSentences(text, mechanism) {
   const m = new RegExp(mechanism.replace(/ /g, "\\s+"), "i");
-  return sentences(text).filter((s) => m.test(s) && !UNBUILT_RE.test(s));
+  return sentences(text).filter((s) => m.test(s) && !NOT_WIRED_RE.test(s));
 }
 
-test("every unbuilt mechanism a page names is disclaimed in the same sentence", () => {
-  // Source AND rendered output: a mechanism named by an imported component
-  // reaches the reader, and checking only route source would let it through
-  // with no disclaimer at all.
-  for (const { name, text } of [...pages, ...built.filter((f) => f.name.endsWith(".html"))]) {
-    for (const mechanism of MECHANISMS) {
-      const bad = undisclaimedSentences(text, mechanism);
+// The qualifier guard is per-sentence and needs attributable text, so it runs
+// over the hand-written sources plus the built HTML. graph.ts is in it because
+// it is one of the files this change edits and it makes mechanism claims.
+const QUALIFIER_CORPUS = [
+  ...authored,
+  graphSource,
+  ...built.filter((f) => f.name.endsWith(".html")),
+];
+
+// The positive guard above is POSITIONAL: it asks only that a not-wired phrase
+// appear somewhere in the sentence. A compound sentence can therefore attach
+// the qualifier to a different subject and pass while asserting the opposite —
+// "The allowlist projection now drives this site, and the old curated graph is
+// not connected any more" satisfies it completely.
+//
+// So the fail-closed half: a list of relationships this site does not have,
+// which must appear NOWHERE. The two guards are much stronger together than
+// either is alone — one requires the disclaimer, the other rejects the claim,
+// and a sentence has to get past both.
+//
+// The verbs are third-person present forms on purpose. Those are the assertion
+// forms; "could one day drive this layer" is a hypothesis and graph.ts is
+// allowed to state it.
+const FALSE_MECHANISM_CLAIMS = [
+  /(allowlist|publish) projection[^.!?]{0,80}\b(feeds|drives|powers|generates|is wired to|is connected to)\b/i,
+  // Retired 2026-09-06 with the output tripwire. Both wordings shipped: the
+  // first on colophon.astro and in README.md, which no guard was reading.
+  /nothing scans the (output|result|build)/i,
+  /(the )?(build|repository|site) runs no (output )?scan/i,
+];
+
+const NEGATIVE_CORPUS = [...authored, graphSource, ...built];
+
+test("no text asserts a mechanism relationship this site does not have", () => {
+  for (const { name, text } of NEGATIVE_CORPUS) {
+    for (const pattern of FALSE_MECHANISM_CLAIMS) {
+      assert.doesNotMatch(
+        text, pattern,
+        `${name} asserts a mechanism relationship that does not exist: ${pattern}`,
+      );
+    }
+  }
+});
+
+test("a compound sentence cannot smuggle a wired claim past the qualifier guard", () => {
+  // Both of these pass the positive guard — the qualifier is present, attached
+  // to a different subject — and both assert exactly the false, present-tense,
+  // wired claim these guards exist to prevent. Pinned so that removing the
+  // negative guard, or narrowing its verb list, goes red here.
+  const compound = [
+    "The allowlist projection now drives this site, and the old curated graph is not connected any more.",
+    "The allowlist projection feeds this page directly; the tripwire is not wired to the explorer.",
+  ];
+  for (const claim of compound) {
+    assert.deepEqual(
+      unqualifiedSentences(claim, "allowlist projection"), [],
+      "precondition: the positive guard is expected to accept this sentence — that is why the negative guard exists",
+    );
+    assert.ok(
+      FALSE_MECHANISM_CLAIMS.some((re) => re.test(claim)),
+      `the negative guard misses a compound wired claim: ${claim}`,
+    );
+  }
+
+  // The retired no-scan claim, in each of the three forms that shipped.
+  for (const claim of [
+    "An author who types a real identifier into a page publishes it, because nothing scans the output.",
+    "The build compiles what it is given and nothing scans the result.",
+    "No field carries a publication marker and this repository's build runs no output scan.",
+  ]) {
+    assert.ok(
+      FALSE_MECHANISM_CLAIMS.some((re) => re.test(claim)),
+      `the negative guard misses a retired no-scan claim: ${claim}`,
+    );
+  }
+});
+
+// "every build" is not true of `npm run build`, which is `astro build` alone.
+// Only the pull-request check and the deploy invoke the scan. This exact
+// overstatement was corrected on one page and left standing on four others
+// (README, graph.ts, thesis, and a second sentence in publish.astro itself),
+// which is the third time a sibling copy of a corrected claim survived on this
+// branch. A guard is the only thing that stops a fourth.
+const BUILD_QUALIFIER = /reach the public|pull-request|CI and deploy|deploy workflows/i;
+
+test("no sentence claims the tripwire runs on every build without qualifying it", () => {
+  for (const { name, text } of NEGATIVE_CORPUS) {
+    const bad = sentences(text).filter(
+      (s) => /every build/i.test(s) && !BUILD_QUALIFIER.test(s),
+    );
+    assert.deepEqual(
+      bad, [],
+      `${name} claims "every build" without saying which builds: ${JSON.stringify(bad.slice(0, 2))}`,
+    );
+  }
+});
+
+test("every sentence naming the projection says it is not wired to this site", () => {
+  for (const { name, text } of QUALIFIER_CORPUS) {
+    for (const mechanism of PROJECTION_NAMES) {
+      const bad = unqualifiedSentences(text, mechanism);
       assert.deepEqual(
         bad,
         [],
-        `${name} names "${mechanism}" in ${bad.length} sentence(s) that do not say it is unbuilt: ${JSON.stringify(bad.slice(0, 2))}`,
-      );
-    }
-
-  }
-
-  for (const { name, text } of built) {
-    for (const pattern of RUNNING_MECHANISM) {
-      assert.doesNotMatch(
-        text,
-        pattern,
-        `${name} asserts an unbuilt publish mechanism is running: ${pattern}`,
+        `${name} names "${mechanism}" in ${bad.length} sentence(s) that do not say it is unwired: ${JSON.stringify(bad.slice(0, 2))}`,
       );
     }
   }
-  // Per node, not per file: a single "designed, not built" anywhere in graph.ts
-  // would let the OTHER node be flipped back to a present-tense claim while the
-  // assertion still passed, and graph.ts feeds the public explorer directly.
-  for (const id of ["allowlist", "tripwire"]) {
-    const node = graph.match(new RegExp(`id:\\s*"${id}"[\\s\\S]{0,700}?\\n  \\}`));
-    assert.ok(node, `graph.ts no longer has a node with id "${id}" — update this guard`);
+});
 
-    // The `kind` field specifically: Explorer.tsx renders it as the node's
-    // visible tag, and a match anywhere in the object would stay green while
-    // kind was flipped back and the label survived only in `detail`.
-    const kind = node[0].match(/kind:\s*"([^"]*)"/);
-    assert.ok(kind, `graph.ts node "${id}" has no kind field — update this guard`);
-    assert.equal(
-      kind[1],
-      "designed, not built",
-      `graph.ts node "${id}" must carry kind: "designed, not built" — the explorer renders this field`,
+// A false, present-tense, wired claim can hide behind stock phrasing that
+// sounds like a disclaimer without saying anything about the connection. This
+// exact sentence passed an earlier, looser form of NOT_WIRED_RE — pinned here
+// so that loosening it again reintroduces a claim this guard exists to catch.
+test("a stock-phrasing sentence asserting the projection IS wired is not mistaken for a disclaimer", () => {
+  const falseClaim =
+    "The allowlist projection now feeds this site directly because no lab data is imported through any other channel.";
+  const bad = unqualifiedSentences(falseClaim, "allowlist projection");
+  assert.deepEqual(
+    bad,
+    [falseClaim],
+    "NOT_WIRED_RE accepted a sentence asserting the projection IS wired — it must reject anything that does not name the connection itself",
+  );
+});
+
+test("both workflows run the tripwire, so the present-tense claim stays earned", () => {
+  const workflows = fileURLToPath(new URL("../.github/workflows", import.meta.url));
+
+  // What `npm run scan` actually runs. Asserting only that the workflows
+  // invoke it leaves `"scan": "true"` green: every assertion below would pass
+  // while the gate ran a command that exits 0 over nothing.
+  const pkg = JSON.parse(
+    readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"));
+  assert.match(
+    pkg.scripts.scan, /tools\/scan-dist\.mjs/,
+    "package.json's scan script no longer runs the tripwire — the workflow steps below would gate nothing",
+  );
+
+  for (const wf of ["ci.yml", "deploy.yml"]) {
+    const text = readFileSync(join(workflows, wf), "utf8");
+    // Deliberately not anchored to `- run: npm run scan`: refactoring the step
+    // to a two-line `- name:` / `run:` form is correct and must not red this
+    // suite. The ordering assertion below is what makes placement matter.
+    assert.ok(
+      text.includes("npm run scan"),
+      `${wf} does not run the tripwire — the site claims it runs on every build`,
+    );
+    // A gate that cannot fail the build is not a gate. Checked over the whole
+    // file, not just the scan step: continue-on-error anywhere in these two
+    // short workflows is either this defect or something needing its own
+    // review, and neither should land silently.
+    assert.doesNotMatch(
+      text, /continue-on-error/i,
+      `${wf} contains continue-on-error — a step that reports red as green gates nothing`,
     );
   }
+  const deploy = readFileSync(join(workflows, "deploy.yml"), "utf8");
+  // Assert the marker EXISTS before comparing positions. If the deploy action
+  // is ever swapped, indexOf returns -1 and a bare ordering compare fails with
+  // a confusing "scan must precede" message about a step that is not there.
+  const deployStep = deploy.indexOf("wrangler-action");
+  assert.notEqual(
+    deployStep, -1,
+    "deploy.yml no longer references wrangler-action — update this guard to name the new deploy step",
+  );
+  assert.ok(
+    deploy.indexOf("npm run scan") < deployStep,
+    "the scan must precede the deploy step, or it gates nothing",
+  );
+});
+
+test("the explorer graph's publish nodes carry their built status", () => {
+  // Per node, not per file: one correct kind anywhere in graph.ts would let the
+  // OTHER node be flipped while the assertion still passed, and graph.ts feeds
+  // the public explorer directly. The `kind` field specifically, because
+  // Explorer.tsx renders it as the node's visible tag.
+  const expected = { allowlist: "built, not wired", tripwire: "enforced before publish" };
+  for (const [id, want] of Object.entries(expected)) {
+    const node = graph.match(new RegExp(`id:\\s*"${id}"[\\s\\S]{0,700}?\\n  \\}`));
+    assert.ok(node, `graph.ts no longer has a node with id "${id}" — update this guard`);
+    const kind = node[0].match(/kind:\s*"([^"]*)"/);
+    assert.ok(kind, `graph.ts node "${id}" has no kind field — update this guard`);
+    assert.equal(kind[1], want,
+      `graph.ts node "${id}" must carry kind: "${want}" — the explorer renders this field`);
+  }
+
+  // The node body, not just the kind tag. A `detail` establishes its subject
+  // from the node it belongs to, so its prose says "it", and neither the
+  // sentence-scoped qualifier guard nor the negative guard can see a pronoun.
+  // "It is wired to this site and it feeds every page" passes both of them
+  // inside this node while `kind` still reads "built, not wired". Scope the
+  // check to the node instead: the allowlist node's own text must carry the
+  // disclaimer somewhere in it.
+  //
+  // The `detail` field specifically, NOT the whole node: `kind` already reads
+  // "built, not wired", so a whole-node match is satisfied by the tag it is
+  // supposed to be corroborating and asserts nothing about the prose.
+  const allowlist = graph.match(/id:\s*"allowlist"[\s\S]{0,700}?\n  \}/)[0];
+  const detail = allowlist.match(/detail:\s*\n?\s*"((?:[^"\\]|\\.)*)"/);
+  assert.ok(detail, 'graph.ts node "allowlist" has no detail field — update this guard');
+  assert.match(
+    detail[1], NOT_WIRED_RE,
+    'graph.ts\'s "allowlist" detail no longer says the projection is unwired — the explorer publishes this prose verbatim',
+  );
 });
 
 test("no page claims this site is generated from the inventory", () => {
@@ -209,7 +399,7 @@ test("no page claims this site is generated from the inventory", () => {
     /inventory\.yaml[^.!?]{0,80}(generates|feeds|produces|renders|drives)[^.!?]{0,40}(this|the public) site/i,
     /(the )?inventory[^.!?]{0,60}(is projected|projects)[^.!?]{0,40}(into|onto|to) (this|the public) site/i,
   ];
-  for (const { name, text } of [...pages, ...built]) {
+  for (const { name, text } of [...authored, ...built]) {
     for (const pattern of retired) {
       assert.doesNotMatch(text, pattern, `${name} claims generated provenance the site does not have: ${pattern}`);
     }

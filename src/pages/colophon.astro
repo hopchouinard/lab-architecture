@@ -27,15 +27,15 @@ import Chips from "../components/Chips.astro";
     <code>src/data/graph.ts</code> says so in its opening comment.
   </p>
 
-  <Callout tone="publish" label="What is not here yet">
+  <Callout tone="publish" label="What is built, and what is not connected">
     <p>
-      The <a href="/publish">Publish</a> boundary is designed around two mechanisms, and
-      <strong>neither is built</strong>: an allowlist projection that does not exist, which
-      would emit only fields explicitly marked publishable, and an independent tripwire that
-      does not exist either, which would scan build output for anything secret-shaped and fail
-      the build on a match. No inventory field carries a publication marker and this
-      repository's build runs no output scan. They are the prerequisite for ever feeding this
-      site real lab data, not a description of what guards it today.
+      The <a href="/publish">Publish</a> boundary rests on two mechanisms, and both now
+      exist. The tripwire runs in this repository, scanning build output for anything
+      secret-shaped and failing the build on a match. The allowlist projection is built
+      inside Describe, emitting only fields explicitly marked publishable, and it is
+      <strong>not wired</strong> to this site. They are the prerequisite for ever feeding
+      this site real lab data; what guards it today is still the plain fact that
+      <em>no lab data is imported here at all</em>.
     </p>
   </Callout>
 
@@ -87,9 +87,12 @@ import Chips from "../components/Chips.astro";
   <p>
     The site carries no live data. Nothing it displays changes after the build runs.
     There is no polling loop, no webhook listener, no cron job refreshing a feed from the
-    lab. The explorer's graph is a curated representation; if the allowlist generator is
-    ever built, its physical layer could be derived from the same inventory as everything
-    else — and the tripwire would have to be built in the same breath.
+    lab. The explorer's graph is a curated representation; its physical layer could one day
+    be derived from the same inventory as everything else, by way of the tripwire that
+    already scans this build and the projection now built inside Describe. The allowlist
+    projection is not connected to it today. The tripwire is: the explorer's graph compiles
+    into a JavaScript asset, and the scan reads those — so what is missing is the data
+    source, not the guard.
   </p>
 
   <p>
@@ -102,8 +105,11 @@ import Chips from "../components/Chips.astro";
   <p>
     No pipeline carries the lab's secrets toward this site; they were never compiled into
     it. That is a property of absence, not of a filter, and it is worth saying plainly rather
-    than dressing it up. It also has a limit worth stating in the same breath: an author who
-    types a real identifier into a page publishes it, because nothing scans the output. The
-    boundary holds against ingestion. It does not hold against a mistake.
+    than dressing it up. It also has a limit worth stating in the same breath: the build
+    compiles what it is given, so an author who types a real identifier into a page can still
+    publish it. The boundary holds against ingestion by construction, and against that
+    mistake by the output tripwire, which scans this build for anything secret-shaped and
+    fails it on a match. A scan catches what looks like a secret, not every way a person can
+    be wrong.
   </p>
 </ContentPage>

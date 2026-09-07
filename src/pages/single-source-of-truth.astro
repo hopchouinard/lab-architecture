@@ -40,7 +40,7 @@ import Chips from "../components/Chips.astro";
   <h2>Views, not copies</h2>
 
   <p>
-    Two generated representations derive from <code>inventory.yaml</code>, each for a
+    Three generated representations derive from <code>inventory.yaml</code>, each for a
     different audience and purpose.
   </p>
   <p>
@@ -57,19 +57,20 @@ import Chips from "../components/Chips.astro";
     geometry so routes recalculate automatically when the inventory changes.
   </p>
   <p>
-    A third view is designed but not built: a <strong>publish projection</strong> that would drive
-    <a href="/publish">this site</a> through an allowlist filter, emitting only fields explicitly
-    marked publishable and passing the result through an independent tripwire. No inventory field
-    carries such a marker today and no generator emits such a projection, so the public site
-    currently derives from nothing — it is written by hand, and never touches
-    <code>inventory.yaml</code> at all.
+    A third view now exists and is <strong>not wired</strong> to
+    <a href="/publish">this site</a>: a <strong>publish projection</strong> that emits only
+    fields explicitly marked publishable in the schema, fail-closed, so an unmarked field
+    produces no output at all rather than an empty one. It writes a committed artifact inside
+    this boundary, and nothing carries that artifact across. The public site currently derives
+    from nothing — it is written by hand, and never touches <code>inventory.yaml</code> at all.
   </p>
 
   <PullQuote>Add a host once. It appears in the docs and in the diagram — or nowhere at all.</PullQuote>
 
   <p>
-    Both generated views are outputs, not sources. Editing either directly is editing a shadow that
-    will be overwritten on the next run.
+    All three generated views are outputs, not sources — the reference documentation, the diagram,
+    and the public projection alike. Editing any of them directly is editing a shadow that will be
+    overwritten on the next run.
   </p>
 
   <h2>Determinism is not an accident</h2>

@@ -26,14 +26,21 @@ the lab. The explorer's physical graph is a deliberately generic stand-in
 here **by ingestion** — not because a filter removes it, but because it was never
 imported.
 
-That is a claim about the pipeline and not a guarantee about the output. An
-author who types a real hostname, address or credential into a page ships it:
-the build compiles what it is given and nothing scans the result. Covering that
-path is what the tripwire below is for.
+That is a claim about the pipeline and not a guarantee about the output. The
+build compiles what it is given, so an author who types a real hostname,
+address or credential into a page can still publish it. That path is covered by
+the [output tripwire](#the-output-tripwire), which scans the built `dist/` on
+every build that can reach the public — the pull-request check and the deploy —
+and fails on anything secret-shaped. A local `npm run build` does not invoke it;
+the gate is on the path that publishes. It catches
+secret-*shaped* strings; it is not a guarantee against every possible mistake.
 
-The inventory-fed allowlist projection and the output tripwire that would let
-this site carry real lab data are **designed and not built**. The site's pages
-say so wherever they discuss that pipeline.
+The two mechanisms that would let this site ever carry real lab data are in
+different states, and the pages say which one wherever they discuss that
+pipeline. The output tripwire is **built**, and it runs here. The inventory-fed
+allowlist projection is built inside the Describe boundary and is **not wired**
+to this site: nothing carries its artifact here, and no build step in this
+repository reads anything from the lab.
 
 ## Running it locally
 
@@ -43,10 +50,11 @@ chaining.
 ```sh
 npm ci
 npm run build    # emits dist/
+npm run scan     # the output tripwire over dist/
 npm test         # node:test assertions over the built dist/
 ```
 
-`npm test` reads `dist/`, so run `npm run build` before it.
+Both `npm run scan` and `npm test` read `dist/`, so run `npm run build` first.
 
 For the dev server, `AGENTS.md` requires background mode — `npm run dev` runs
 `astro dev` in the foreground and blocks the shell:
@@ -61,6 +69,71 @@ npx astro dev stop
 If you invoke npm from outside the project root, use `npm --prefix
 /path/to/lab-architecture run build` — the scripts resolve their paths from the
 project root, not the working directory.
+
+## The output tripwire
+
+`npm run scan` runs `tools/scan-dist.mjs` over the built `dist/`, and both
+workflows run it after the build and before anything else that consumes the
+build — in `deploy.yml` it runs before the Cloudflare credentials are so much
+as read. It knows nothing about the lab: every rule is a self-contained pattern
+for a *shape* (RFC 1918 address, private-use FQDN, PEM header, AWS/GitHub/
+OpenAI-style key, credential assignment, MAC address, long high-entropy run).
+Handing this repository the inventory to check against would publish the
+secrets it exists to keep out.
+
+It scans **every** file type in `dist/` except a short, explicit list of
+known-binary extensions. A file whose extension is on neither list stops the
+build: an unopened file is an unscanned file.
+
+Exit codes:
+
+| Code | Meaning |
+| --- | --- |
+| 0 | Clean. Nothing secret-shaped in the build. |
+| 1 | Findings. Paths are scanned as well as contents, so a leak can be a file or directory *name* — those report as `path (path)`. Each is printed as `path: [rule] <redacted N chars>`. The matched text is **not** echoed: this scan runs in Actions on a public repository, and printing a real secret there would copy it into a world-readable log. Set `SCAN_SHOW_MATCHES=1` locally to reveal it — which is how a baseline entry gets written, since the baseline is exact-match. |
+| 2 | Structural failure — missing/empty `dist/`, no built HTML, an unclassified file type, an unreadable or malformed baseline. The scan could not do its job, which is not the same as finding nothing. |
+
+**Known limits, stated rather than discovered.** The rendered-text pass decodes
+numeric character references and the named ones that can sit inside a secret
+(`&colon;`, `&period;`, `&commat;` and friends) — not all ~2200 named
+references, because Node ships no entity table and this repo takes no
+dependency. A multiline YAML block scalar (`password: |`) is matched only on its
+first line. Both are the right fix the day a dependency is acceptable; until
+then they are written down here instead of being quietly absent.
+
+A baseline entry is `rule|file|match`, scoped on purpose: a bare match would be
+a repository-wide allowlist, so approving a dependency's address would also
+permit an author to publish that same real address on a page. Bare strings still
+load, and are match-only.
+
+Exit 2 is deliberately not exit 1, so "the scan is broken" is never read as
+"the scan found nothing".
+
+**A real finding is removed from the source.** Never from the scan. There is
+exactly one sanctioned way to silence a false positive: add the offending
+string, verbatim and in full, as one **scoped** entry in
+`tools/scan-baseline.json`, in the form `rule|file|match`.
+
+```jsonc
+["high-entropy-run|_astro/client.abc123.js|Ab3xY9kQ...the exact matched string..."]
+```
+
+Run `SCAN_SHOW_MATCHES=1 npm run scan` locally to read the literal text, since
+the CI output redacts it.
+
+**Scope it.** A bare `match` entry still loads, for older baselines, but it
+suppresses that string under *every* rule in *every* file — so approving a
+dependency's `192.168.1.1` would also permit an author to publish that same
+real gateway address on a page. Use the three-part form.
+
+Never a path exclusion, never a directory exclusion, never a narrowed rule to
+make one file pass. A scoped entry suppresses that one string, in that one
+file, under that one rule, so the next dependency bump that emits a *different*
+secret-shaped string still reds the build. A path or glob exclusion silently
+covers everything that file will ever contain, including the leak it does not
+have yet. That doctrine is the only reason this mechanism survives a
+dependency bump; the baseline is empty today and every line ever added to it
+should be justified in the commit that adds it.
 
 ## How it deploys
 
@@ -87,6 +160,8 @@ src/components/explorer/  the React Flow island (client-hydrated, inert)
 src/data/graph.ts         the explorer's hand-authored graph
 src/data/nav.ts           the nav model and reading order
 tests/           build assertions run against dist/
+tools/scan-dist.mjs       the output tripwire
+tools/scan-baseline.json  exact-match false-positive suppressions (empty)
 ```
 
 ## Editing rules
@@ -94,8 +169,9 @@ tests/           build assertions run against dist/
 Every factual claim on this site is checked against the live estate before it
 ships. Two rules follow from that:
 
-1. **Do not strengthen a claim past what the estate does.** If a mechanism is
-   designed but not built, the page must say which.
+1. **Do not strengthen a claim past what the estate does.** A mechanism is
+   designed, or built, or built-and-wired-to-this-site, and the page must say
+   which. "Built" somewhere else is not "wired" here.
 2. **Re-verify before you re-word.** The estate moves; a claim that was true in
    July can be false in September, and the reverse happens just as often.
 

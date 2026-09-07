@@ -34,6 +34,11 @@ jobs:
 
       - run: npm run build
 
+      # The output tripwire, before anything else that reads the build: a
+      # leaked secret should red the PR ahead of every other check, not after
+      # them. Fails closed on a missing or empty dist/.
+      - run: npm run scan
+
       # The claim guards. A page that revives a retired claim fails here,
       # before review, rather than after it has already shipped.
       - run: npm test

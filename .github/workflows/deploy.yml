@@ -46,6 +46,11 @@ jobs:
 
       - run: npm run build
 
+      # The output tripwire. This is the copy that gates the actual deploy, and
+      # it runs before the credential check below, so a leak stops the pipeline
+      # while the Cloudflare token is still untouched.
+      - run: npm run scan
+
       # The suite asserts over dist/, so it runs after the build and before the
       # deploy: a page that revives a retired claim fails here rather than
       # shipping. See tests/claims.test.mjs for why each guard exists.

@@ -23,8 +23,11 @@ import Callout from "../components/Callout.astro";
     here can leak <em>by ingestion</em>: no automated path carries a hostname, an address or a
     credential from the lab into this build. It does not follow that nothing can leak at all.
     An author who types a real identifier into a page ships it, because the build compiles what
-    it is given and nothing scans the result. Hand-authoring moves the risk from a mechanism to
-    a person; the tripwire described below is what would move it back.
+    it is given. Hand-authoring moved that risk from a mechanism to a person; the tripwire
+    described below is what moves it back, and it gates every build that can reach the
+    public: the pull-request check and the deploy. A local <code>npm run build</code> does
+    not invoke it, so a hand-copied <code>dist/</code> is not covered — the gate is on the
+    path that publishes, not on the act of compiling.
   </p>
 
   <h2>Nothing crossed, so nothing had to be caught</h2>
@@ -49,43 +52,51 @@ import Callout from "../components/Callout.astro";
 
   <PullQuote>No filter keeps the lab's secrets off this page. Nothing ever carried them toward it.</PullQuote>
 
-  <h2>What the boundary is designed to become</h2>
+  <h2>What the boundary enforces, and what it does not yet do</h2>
 
   <p>
     Hand-authoring is a narrow guarantee and a weak pipeline. It rules out one failure — no
     automated path carries lab data here — and rules out nothing else: it cannot stay current
     on its own, and it cannot stop an author from typing something real. Every fact on this
-    site is a fact a human re-checked. The intended end state closes both gaps with two
-    mechanisms, and it is worth being precise that both are
-    <strong>designed and not yet built</strong>.
+    site is a fact a human re-checked. Two mechanisms close those gaps, and it is worth being
+    precise about which one is doing work here today: <strong>one runs on this build, the
+    other is built elsewhere and is not connected to this site</strong>.
   </p>
 
   <p>
-    The first is an <strong>allowlist projection</strong>, which does not exist today. Each
-    field in the inventory would carry a publication status; fields marked publishable would
-    cross the boundary and all others would not exist in the build context. The point of a projection rather than a redaction is
-    that a redaction is a scrub that can be done wrong, while a projection only ever emits
-    what is explicitly named. Adding a field to the inventory would keep it private by
-    default until an author deliberately marked it otherwise: fail-closed, not fail-open.
+    The first is an <strong>allowlist projection</strong>, which now exists inside the
+    Describe boundary and is <strong>not wired</strong> to this site. Each field in the
+    inventory schema may carry a publication marker; marked fields are emitted and every
+    other field produces no output at all — not an empty value, absent. The point of a
+    projection rather than a redaction is that a redaction is a scrub that can be done
+    wrong, while a projection only ever emits what is explicitly named. Adding a field to
+    the inventory keeps it private by default until someone deliberately marks it
+    otherwise: fail-closed, not fail-open.
   </p>
 
   <p>
-    The second is an independent <strong>tripwire</strong> over the build output, which does
-    not exist either — a scan for anything secret-shaped that would run after the projection
-    and before the site is assembled, failing the build on a match. Its value is that it is not the projection. Two mechanisms
-    would have to fail together for a secret to reach the public, and neither one's authors
-    can talk the other out of its verdict.
+    The second is an independent <strong>tripwire</strong> over the build output, and it
+    runs here, on every build that can reach the public — the pull-request check and the
+    deploy. It scans the compiled output for anything
+    secret-shaped — private-range addresses, internal hostnames, key material, credential
+    assignments — and fails the build on a match, before anything ships. Its value is that
+    it is not the projection, and neither one's authors can talk the other out of its
+    verdict. <strong>That independence is not yet doing any work here.</strong> Because the
+    projection is not wired to this site, only the tripwire stands between an author's
+    mistake and the public: one mechanism has to miss, not two. The two-guard property
+    arrives with the wiring, and this page will say so when it does.
   </p>
 
   <Callout tone="publish" label="Status of this boundary">
     <p>
-      Neither the projection nor the tripwire exists today. No field in
-      <code>inventory.yaml</code> carries a publication marker, no generator emits a public
-      projection, and this repository's build runs no output scan. The safety property this
-      page claims rests entirely on the fact that <em>no lab data is imported here at all</em>
-      — which is airtight while it holds, and stops holding on the day someone wires the
-      inventory in. That is the day the two mechanisms above have to exist, and the reason
-      they are described here as a commitment rather than an accomplishment.
+      The tripwire is built and runs in this repository's CI and deploy workflows. The
+      allowlist projection is built in the Describe repository, where it emits a committed
+      public artifact, and it is <strong>not wired</strong> to this site: nothing carries
+      that artifact here. The safety property this page claims still rests entirely on the
+      fact that <em>no lab data is imported here at all</em> — which is airtight while it
+      holds, and stops holding on the day someone wires the inventory in. The difference
+      from before is that on that day both mechanisms already exist; only the wiring is
+      missing, and wiring is a decision rather than a construction project.
     </p>
   </Callout>
 
