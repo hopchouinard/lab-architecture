@@ -93,7 +93,17 @@ export const RULES = [
   // cannot cross one, so {"token":"hunter2abcdef"} and {"api_key": "..."}
   // scored zero — and that is exactly the serialization Astro emits for
   // island props and for any dist/*.json.
-  { name: "credential-assignment", re: /\b(?:api[_-]?key|secret|token|password|passwd)["']?\s*[=:]\s*["']?[A-Za-z0-9/+_-]{8,}/gi },
+  // Two forms. A QUOTED value runs to its closing quote, so punctuation inside
+  // it cannot end the match early. An UNQUOTED value stops only at whitespace,
+  // quotes or a tag boundary. The old class was [A-Za-z0-9/+_-], which halted at
+  // the first symbol: `password: P@ssw0rd!x` matched just "P", failed the
+  // length floor, and reported clean — and punctuation is exactly what a strong
+  // password has. The unquoted class still stops at STRUCTURAL delimiters
+  // (, ; : {} () []), because a minified bundle's `password:!0,range:!0,...`
+  // input-type map is not a value and matching it made the scan red on a clean
+  // build. That is a rule that was wrong, not a false positive to baseline: the
+  // baseline is exact-match, and a minified fragment changes every rebuild.
+  { name: "credential-assignment", re: /\b(?:api[_-]?key|secret|token|password|passwd)["']?\s*[=:]\s*(?:(["'])[^"'\n]{6,}\1|[^\s"'<>,;:{}()\[\]]{8,})/gi },
   { name: "mac-address", re: /\b(?:[0-9a-f]{2}:){5}[0-9a-f]{2}\b/gi },
   // Base64/hex alphabet only (no - or _) plus mixed case plus a digit. The
   // permissive form matches CSS custom properties and asset paths; this one
@@ -155,7 +165,12 @@ function renderedText(html) {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    // BOTH numeric forms. Decimal alone left `password&#x3a; secret` invisible
+    // while `password&#58; secret` was caught — the same string, one encoding
+    // apart, and the browser renders them identically.
     .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
     .replace(/\s+/g, " ");
 }
 

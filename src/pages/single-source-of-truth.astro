@@ -40,7 +40,7 @@ import Chips from "../components/Chips.astro";
   <h2>Views, not copies</h2>
 
   <p>
-    Two generated representations derive from <code>inventory.yaml</code>, each for a
+    Three generated representations derive from <code>inventory.yaml</code>, each for a
     different audience and purpose.
   </p>
   <p>
@@ -68,8 +68,9 @@ import Chips from "../components/Chips.astro";
   <PullQuote>Add a host once. It appears in the docs and in the diagram — or nowhere at all.</PullQuote>
 
   <p>
-    Both generated views are outputs, not sources. Editing either directly is editing a shadow that
-    will be overwritten on the next run.
+    All three generated views are outputs, not sources — the reference documentation, the diagram,
+    and the public projection alike. Editing any of them directly is editing a shadow that will be
+    overwritten on the next run.
   </p>
 
   <h2>Determinism is not an accident</h2>

@@ -254,6 +254,34 @@ test("SCAN_SHOW_MATCHES=1 reveals the match, so a baseline entry can be written"
   assert.match(lines.join("\n"), /172\.31\.255\.254/);
 });
 
+test("a hexadecimal HTML entity cannot hide an assignment", () => {
+  // The browser renders &#x3a; and &#58; identically. Decoding only the decimal
+  // form left the same secret visible to a reader and invisible to the scan.
+  assert.equal(scanText("x.html", "<p>password&#x3a; hunter2abcdef</p>")[0].rule,
+    "credential-assignment");
+  assert.equal(scanText("x.html", "<p>password&#58; hunter2abcdef</p>")[0].rule,
+    "credential-assignment");
+});
+
+test("a credential containing punctuation is caught", () => {
+  // The old value class stopped at the first symbol, so `P@ssw0rd!x` matched
+  // just "P" and fell under the length floor — and punctuation is precisely
+  // what a strong password has.
+  assert.equal(scanText("x.html", "<p>password: P@ssw0rd!x</p>")[0].rule,
+    "credential-assignment");
+  assert.equal(scanText("x.html", '<p>password: "P@ss w0rd!"</p>')[0].rule,
+    "credential-assignment");
+});
+
+test("a minified input-type map is not a credential assignment", () => {
+  // Broadening the value class made the scan RED on a clean build: a bundle's
+  // `password:!0,range:!0,...` is a JS object literal, not a value. The
+  // unquoted branch stops at structural delimiters for this reason. Baselining
+  // it would have been wrong twice over — the rule was mistaken, and the
+  // baseline is exact-match against a string that changes every rebuild.
+  assert.deepEqual(scanText("x.js", "password:!0,range:!0,search:!0,tel:!0"), []);
+});
+
 test("a missing dist fails closed, not green", () => {
   assert.equal(run(join(tmpdir(), "definitely-not-here-42"), BASELINE).code, 2);
 });

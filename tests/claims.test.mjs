@@ -255,6 +255,26 @@ test("a compound sentence cannot smuggle a wired claim past the qualifier guard"
   }
 });
 
+// "every build" is not true of `npm run build`, which is `astro build` alone.
+// Only the pull-request check and the deploy invoke the scan. This exact
+// overstatement was corrected on one page and left standing on four others
+// (README, graph.ts, thesis, and a second sentence in publish.astro itself),
+// which is the third time a sibling copy of a corrected claim survived on this
+// branch. A guard is the only thing that stops a fourth.
+const BUILD_QUALIFIER = /reach the public|pull-request|CI and deploy|deploy workflows/i;
+
+test("no sentence claims the tripwire runs on every build without qualifying it", () => {
+  for (const { name, text } of NEGATIVE_CORPUS) {
+    const bad = sentences(text).filter(
+      (s) => /every build/i.test(s) && !BUILD_QUALIFIER.test(s),
+    );
+    assert.deepEqual(
+      bad, [],
+      `${name} claims "every build" without saying which builds: ${JSON.stringify(bad.slice(0, 2))}`,
+    );
+  }
+});
+
 test("every sentence naming the projection says it is not wired to this site", () => {
   for (const { name, text } of QUALIFIER_CORPUS) {
     for (const mechanism of PROJECTION_NAMES) {
@@ -334,7 +354,7 @@ test("the explorer graph's publish nodes carry their built status", () => {
   // OTHER node be flipped while the assertion still passed, and graph.ts feeds
   // the public explorer directly. The `kind` field specifically, because
   // Explorer.tsx renders it as the node's visible tag.
-  const expected = { allowlist: "built, not wired", tripwire: "enforced on every build" };
+  const expected = { allowlist: "built, not wired", tripwire: "enforced before publish" };
   for (const [id, want] of Object.entries(expected)) {
     const node = graph.match(new RegExp(`id:\\s*"${id}"[\\s\\S]{0,700}?\\n  \\}`));
     assert.ok(node, `graph.ts no longer has a node with id "${id}" — update this guard`);

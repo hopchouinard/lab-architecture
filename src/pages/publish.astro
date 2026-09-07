@@ -76,7 +76,8 @@ import Callout from "../components/Callout.astro";
 
   <p>
     The second is an independent <strong>tripwire</strong> over the build output, and it
-    runs here, on every build and every deploy. It scans the compiled output for anything
+    runs here, on every build that can reach the public — the pull-request check and the
+    deploy. It scans the compiled output for anything
     secret-shaped — private-range addresses, internal hostnames, key material, credential
     assignments — and fails the build on a match, before anything ships. Its value is that
     it is not the projection, and neither one's authors can talk the other out of its

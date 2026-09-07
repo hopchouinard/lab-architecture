@@ -13,7 +13,7 @@
 // built inside Describe and is not wired here: this graph still derives from
 // nothing but the hand-authored data below. Two nodes carry a status label
 // rather than a plain description of what they do — allowlist's `kind` reads
-// "built, not wired" and tripwire's reads "enforced on every build" — keep
+// "built, not wired" and tripwire's reads "enforced before publish" — keep
 // both accurate as those mechanisms' relationship to this site changes.
 
 export type Boundary = "describe" | "operate" | "publish" | "physical";
@@ -166,10 +166,10 @@ export const CONCEPT_NODES: GraphNode[] = [
     id: "tripwire",
     label: "Tripwire",
     boundary: "publish",
-    kind: "enforced on every build",
+    kind: "enforced before publish",
     summary: "Refuses to ship anything secret-shaped.",
     detail:
-      "An independent scan over build output that fails the build on a match, so two guards have to fail together for a leak to ship. It runs in this repository's CI and deploy workflows, after the build and before anything is published.",
+      "An independent scan over build output that fails the build on a match. It runs in this repository's CI and deploy workflows, after the build and before anything is published. It is currently the only guard on that path: the allowlist projection is not wired to this site, so two guards have to fail together only once that wiring exists.",
     x: 760,
     y: 270,
   },

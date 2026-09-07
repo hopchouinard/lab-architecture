@@ -30,7 +30,9 @@ That is a claim about the pipeline and not a guarantee about the output. The
 build compiles what it is given, so an author who types a real hostname,
 address or credential into a page can still publish it. That path is covered by
 the [output tripwire](#the-output-tripwire), which scans the built `dist/` on
-every build and every deploy and fails on anything secret-shaped. It catches
+every build that can reach the public — the pull-request check and the deploy —
+and fails on anything secret-shaped. A local `npm run build` does not invoke it;
+the gate is on the path that publishes. It catches
 secret-*shaped* strings; it is not a guarantee against every possible mistake.
 
 The two mechanisms that would let this site ever carry real lab data are in
@@ -88,7 +90,7 @@ Exit codes:
 | Code | Meaning |
 | --- | --- |
 | 0 | Clean. Nothing secret-shaped in the build. |
-| 1 | Findings. Each is printed as `path: [rule] match`. |
+| 1 | Findings. Each is printed as `path: [rule] <redacted N chars>`. The matched text is **not** echoed: this scan runs in Actions on a public repository, and printing a real secret there would copy it into a world-readable log. Set `SCAN_SHOW_MATCHES=1` locally to reveal it — which is how a baseline entry gets written, since the baseline is exact-match. |
 | 2 | Structural failure — missing/empty `dist/`, no built HTML, an unclassified file type, an unreadable or malformed baseline. The scan could not do its job, which is not the same as finding nothing. |
 
 Exit 2 is deliberately not exit 1, so "the scan is broken" is never read as
