@@ -1,5 +1,8 @@
 # build output
 dist/
+
+# agent scratch workspace (ledgers, briefs, review packages)
+.superpowers/
 # generated types
 .astro/
 
