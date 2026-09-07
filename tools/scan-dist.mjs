@@ -82,7 +82,7 @@ export const RULES = [
   // and produced 20 findings against a clean build, all @xyflow/react
   // property access. Requiring two labels with a longer second one separates
   // a real-shaped hostname from that noise.
-  { name: "private-use-fqdn", re: /\b[a-z0-9][a-z0-9-]{0,62}\.[a-z0-9][a-z0-9-]{3,62}\.(?:lab|internal|local|home|lan)\b/gi },
+  { name: "private-use-fqdn", re: /\b[a-z0-9][a-z0-9-]{0,62}\.[a-z0-9][a-z0-9-]{3,62}\.(?:lab|internal|local|home|lan)\b|\b[a-z][a-z0-9-]{3,62}\.(?:lab|internal|local|home|lan)\b/gi },
   { name: "pem-private-key", re: /-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----/g },
   // AKIA is a long-term key, ASIA a temporary (STS) one. Both are 20 chars,
   // which is under the entropy rule's 40-char floor, so if this rule misses
@@ -104,7 +104,7 @@ export const RULES = [
   // input-type map is not a value and matching it made the scan red on a clean
   // build. That is a rule that was wrong, not a false positive to baseline: the
   // baseline is exact-match, and a minified fragment changes every rebuild.
-  { name: "credential-assignment", re: /\b(?:api[_-]?key|secret|token|password|passwd)["']?\s*[=:]\s*(?:(["'])[^"'\n]{6,}\1|[^\s"'<>,;:{}()\[\]]{8,})/gi },
+  { name: "credential-assignment", re: /\b(?:api[_-]?key|secret|token|password|passwd)["']?\s*[=:]\s*(?:(["'])(?:(?!\1)[^\n]){6,}\1|[^\s"'<>,;:{}()\[\]]{8,})/gi },
   // Colon, hyphen and Cisco dotted-triple. The rule advertises "MAC address";
   // colon-only quietly meant "MAC addresses written one particular way".
   { name: "mac-address", re: /\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b|\b(?:[0-9a-f]{4}\.){2}[0-9a-f]{4}\b/gi },
@@ -116,12 +116,15 @@ export const RULES = [
   // dead. Dropped rather than swapped for a (?![A-Za-z0-9+/]) lookahead —
   // padding is not what detects the run, the 40-character body is, and
   // replacing the anchor widens the rule against a build nobody has measured.
-  { name: "high-entropy-run", re: /\b[A-Za-z0-9+/]{40,}\b/g },
+  // Lookarounds on the rule's OWN alphabet, not \b. Underscore is a word
+  // character, so `opaque_<60 chars>` matched neither boundary and a long
+  // opaque value sitting next to an underscore was invisible.
+  { name: "high-entropy-run", re: /(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{40,}(?![A-Za-z0-9+/])/g },
 ];
 
 const isHighEntropy = (s) => /[a-z]/.test(s) && /[A-Z]/.test(s) && /[0-9]/.test(s);
 
-/** @returns {{files: string[], unclassified: string[]}} */
+/** @returns {{files: string[], unclassified: string[], binaries: string[]}} */
 function walk(dir) {
   const files = [];
   const unclassified = [];
@@ -189,8 +192,8 @@ function decodeEntities(text) {
     // BOTH numeric forms. Decimal alone left `password&#x3a; secret` invisible
     // while `password&#58; secret` was caught — the same string, one encoding
     // apart, and the browser renders them identically.
-    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/&#(\d+);?/g, (_, d) => String.fromCharCode(Number(d)))
+    .replace(/&#x([0-9a-f]+);?/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
         .replace(/\s+/g, " ");
 }
 

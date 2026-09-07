@@ -349,6 +349,39 @@ test("a baseline entry is scoped to its rule and file, not global", () => {
   assert.equal(findings[0].file, "index.html");
 });
 
+test("a quoted credential may contain the other quote character", () => {
+  // The quoted branch excluded BOTH quote chars regardless of which opened the
+  // value, so an ordinary apostrophe ended the match early.
+  assert.equal(scanText("x.html", `<p>password: "don't-tell-anyone"</p>`)[0].rule,
+    "credential-assignment");
+  assert.equal(scanText("x.html", `<p>password: 'say"something123'</p>`)[0].rule,
+    "credential-assignment");
+});
+
+test("a numeric character reference without its semicolon still decodes", () => {
+  // HTML parsers accept the semicolon-less form; the browser renders it.
+  assert.equal(scanText("x.html", "<p>password&#58 hunter2abcdef</p>")[0].rule,
+    "credential-assignment");
+});
+
+test("a host directly under a private-use suffix is caught", () => {
+  // The two-label rule existed because single-CHARACTER labels (e.local) are
+  // minified property access. A four-character floor separates the two without
+  // giving up the direct form; verified to leave the real build clean.
+  for (const h of ["nas01.local", "router.internal", "vault.home"]) {
+    assert.equal(scanText("x.txt", h)[0].rule, "private-use-fqdn", h);
+  }
+  for (const noise of ["e.local", "n.local", "e.n.local", "x.y.lan"]) {
+    assert.deepEqual(scanText("x.js", noise), [], noise);
+  }
+});
+
+test("an entropy run bounded by underscores is still a run", () => {
+  // Underscore is a word character, so \b matched at neither end.
+  assert.equal(scanText("x.js", "opaque_" + "aB3".repeat(20))[0].rule, "high-entropy-run");
+  assert.equal(scanText("x.js", "aB3".repeat(20) + "_suffix")[0].rule, "high-entropy-run");
+});
+
 test("a missing dist fails closed, not green", () => {
   assert.equal(run(join(tmpdir(), "definitely-not-here-42"), BASELINE).code, 2);
 });

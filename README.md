@@ -111,15 +111,24 @@ Exit 2 is deliberately not exit 1, so "the scan is broken" is never read as
 
 **A real finding is removed from the source.** Never from the scan. There is
 exactly one sanctioned way to silence a false positive: add the offending
-string, verbatim and in full, as one entry in `tools/scan-baseline.json`.
+string, verbatim and in full, as one **scoped** entry in
+`tools/scan-baseline.json`, in the form `rule|file|match`.
 
 ```jsonc
-["Ab3xY9kQ...the exact matched string..."]
+["high-entropy-run|_astro/client.abc123.js|Ab3xY9kQ...the exact matched string..."]
 ```
 
+Run `SCAN_SHOW_MATCHES=1 npm run scan` locally to read the literal text, since
+the CI output redacts it.
+
+**Scope it.** A bare `match` entry still loads, for older baselines, but it
+suppresses that string under *every* rule in *every* file — so approving a
+dependency's `192.168.1.1` would also permit an author to publish that same
+real gateway address on a page. Use the three-part form.
+
 Never a path exclusion, never a directory exclusion, never a narrowed rule to
-make one file pass. An exact-match entry suppresses that one string and
-nothing else, so the next dependency bump that emits a *different*
+make one file pass. A scoped entry suppresses that one string, in that one
+file, under that one rule, so the next dependency bump that emits a *different*
 secret-shaped string still reds the build. A path or glob exclusion silently
 covers everything that file will ever contain, including the leak it does not
 have yet. That doctrine is the only reason this mechanism survives a
