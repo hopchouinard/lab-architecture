@@ -315,8 +315,16 @@ test("both workflows run the tripwire, so the present-tense claim stays earned",
     );
   }
   const deploy = readFileSync(join(workflows, "deploy.yml"), "utf8");
+  // Assert the marker EXISTS before comparing positions. If the deploy action
+  // is ever swapped, indexOf returns -1 and a bare ordering compare fails with
+  // a confusing "scan must precede" message about a step that is not there.
+  const deployStep = deploy.indexOf("wrangler-action");
+  assert.notEqual(
+    deployStep, -1,
+    "deploy.yml no longer references wrangler-action — update this guard to name the new deploy step",
+  );
   assert.ok(
-    deploy.indexOf("npm run scan") < deploy.indexOf("wrangler-action"),
+    deploy.indexOf("npm run scan") < deployStep,
     "the scan must precede the deploy step, or it gates nothing",
   );
 });

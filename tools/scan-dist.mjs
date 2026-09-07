@@ -61,7 +61,11 @@ const SCANNED_EXT = new Set([
 // than a convenience.
 const KNOWN_BINARY_EXT = new Set([
   ".woff2", ".woff", ".ttf", ".otf", ".eot", ".png", ".jpg", ".jpeg", ".gif",
-  ".webp", ".avif", ".svgz", ".pdf", ".mp4", ".webm", ".zip", ".gz",
+  // NOTE: .svgz and .gz are deliberately NOT here. They are compressed TEXT,
+  // and listing them as binary silently skips a file whose decompressed
+  // content this scanner exists to read. Unlisted means exit 2, which forces
+  // a human to classify it rather than letting it slip past unread.
+  ".webp", ".avif", ".pdf", ".mp4", ".webm", ".zip",
 ]);
 
 export const RULES = [
@@ -73,7 +77,10 @@ export const RULES = [
   // a real-shaped hostname from that noise.
   { name: "private-use-fqdn", re: /\b[a-z0-9][a-z0-9-]{0,62}\.[a-z0-9][a-z0-9-]{3,62}\.(?:lab|internal|local|home|lan)\b/gi },
   { name: "pem-private-key", re: /-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----/g },
-  { name: "aws-access-key-id", re: /\bAKIA[0-9A-Z]{16}\b/g },
+  // AKIA is a long-term key, ASIA a temporary (STS) one. Both are 20 chars,
+  // which is under the entropy rule's 40-char floor, so if this rule misses
+  // the prefix nothing else catches it.
+  { name: "aws-access-key-id", re: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g },
   { name: "github-token", re: /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g },
   { name: "openai-style-key", re: /\bsk-[A-Za-z0-9_-]{20,}\b/g },
   // The optional closing quote before the separator is load-bearing: \s*[=:]
@@ -107,21 +114,65 @@ function walk(dir) {
       unclassified.push(...sub.unclassified);
       continue;
     }
-    const ext = extname(e.name).toLowerCase();
+    // extname(".env") is "" — a dotfile's whole name IS its extension for our
+    // purposes, and ".env" is in SCANNED_EXT precisely because one dropped into
+    // public/ is exactly what we want to read. Without this it landed in
+    // `unclassified` and exited 2: fail-closed, but for the wrong reason, and
+    // confusing to whoever put it there.
+    const lower = e.name.toLowerCase();
+    const ext = extname(lower) || (lower.startsWith(".") ? lower : "");
     if (SCANNED_EXT.has(ext)) files.push(full);
     else if (!KNOWN_BINARY_EXT.has(ext)) unclassified.push(full);
   }
   return { files, unclassified };
 }
 
-export function scanText(file, text) {
-  const findings = [];
+/**
+ * The text a READER receives, not the markup that carries it.
+ *
+ * `<code>password</code>: <code>hunter2abcdef</code>` renders as a plain
+ * credential assignment and every rule here misses it, because the regex sees
+ * the tags in between. That is the same failure as the `data:` URI exclusion
+ * this scanner already dropped: the scanner examining a different
+ * representation than the person looking at the page.
+ *
+ * Scripts and styles are dropped rather than flattened — their content is code,
+ * already scanned in the raw pass, and inlining it here would only duplicate
+ * findings.
+ */
+function renderedText(html) {
+  return html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+    .replace(/\s+/g, " ");
+}
+
+function applyRules(file, text, into, seen) {
   for (const { name, re } of RULES) {
     for (const m of text.matchAll(re)) {
       if (name === "high-entropy-run" && !isHighEntropy(m[0])) continue;
-      findings.push({ file, rule: name, match: m[0] });
+      const key = `${name}\u0000${m[0]}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      into.push({ file, rule: name, match: m[0] });
     }
   }
+}
+
+export function scanText(file, text, { html = /\.x?html?$/i.test(file) } = {}) {
+  const findings = [];
+  const seen = new Set();
+  applyRules(file, text, findings, seen);
+  // Second pass over the rendered text, so a token split across inline markup
+  // is caught. Deduplicated by rule+match: an unsplit secret appears in both
+  // representations and must be reported once.
+  if (html) applyRules(file, renderedText(text), findings, seen);
   return findings;
 }
 

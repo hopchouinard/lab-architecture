@@ -158,6 +158,49 @@ test("a secret is not smuggled past the scanner behind a data URI prefix", () =>
   assert.equal(found[0].match, "AKIAABCDEFGHIJKLMNOP");
 });
 
+test("a credential split across inline markup is caught", () => {
+  // The reader sees "password: hunter2abcdef"; a raw-markup scan sees tags in
+  // between and reports clean. Same failure as the data: URI exclusion — the
+  // scanner reading a different representation than the person on the page.
+  const found = scanText("x.html", "<p><code>password</code>: <code>hunter2abcdef</code></p>");
+  assert.equal(found.length, 1);
+  assert.equal(found[0].rule, "credential-assignment");
+});
+
+test("an unsplit secret in HTML is reported once, not twice", () => {
+  // It matches in both the raw and the rendered pass; dedupe is by rule+match.
+  const found = scanText("x.html", "<p>password: hunter2abcdef</p>");
+  assert.equal(found.length, 1);
+});
+
+test("script and style bodies are not double-reported", () => {
+  const found = scanText("x.html", "<script>var t=\"password: hunter2abcdef\";</script>");
+  assert.equal(found.length, 1);
+});
+
+test("a temporary AWS access-key ID is caught, not just a long-term one", () => {
+  // ASIA keys are 20 chars, under the entropy rule's 40-char floor, so if the
+  // prefix is missed nothing else catches them.
+  assert.equal(scanText("x.html", "ASIAABCDEFGHIJKLMNOP")[0].rule, "aws-access-key-id");
+  assert.equal(scanText("x.html", "AKIAABCDEFGHIJKLMNOP")[0].rule, "aws-access-key-id");
+});
+
+test("compressed text is not classified as binary", () => {
+  // .svgz and .gz are compressed TEXT. Listing them as binary would skip a file
+  // whose content this scanner exists to read; unlisted means exit 2 instead.
+  const dir = fixture({ "index.html": "<p>ok</p>", "map.svgz": "\u001f\u008b binary-ish" });
+  assert.equal(run(dir, BASELINE).code, 2);
+});
+
+test("a dotfile is scanned by its full name, not a missing extension", () => {
+  // extname(".env") is "" — without dotfile handling this exited 2 rather than
+  // reading the file, even though ".env" is in the scanned set.
+  const dir = fixture({ "index.html": "<p>ok</p>", ".env": "password=hunter2abcdef\n" });
+  const { code, findings } = run(dir, BASELINE);
+  assert.equal(code, 1);
+  assert.equal(findings[0].rule, "credential-assignment");
+});
+
 test("a missing dist fails closed, not green", () => {
   assert.equal(run(join(tmpdir(), "definitely-not-here-42"), BASELINE).code, 2);
 });

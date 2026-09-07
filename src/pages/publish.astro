@@ -24,7 +24,10 @@ import Callout from "../components/Callout.astro";
     credential from the lab into this build. It does not follow that nothing can leak at all.
     An author who types a real identifier into a page ships it, because the build compiles what
     it is given. Hand-authoring moved that risk from a mechanism to a person; the tripwire
-    described below is what moves it back, and it now runs on every build of this site.
+    described below is what moves it back, and it gates every build that can reach the
+    public: the pull-request check and the deploy. A local <code>npm run build</code> does
+    not invoke it, so a hand-copied <code>dist/</code> is not covered — the gate is on the
+    path that publishes, not on the act of compiling.
   </p>
 
   <h2>Nothing crossed, so nothing had to be caught</h2>
@@ -76,8 +79,11 @@ import Callout from "../components/Callout.astro";
     runs here, on every build and every deploy. It scans the compiled output for anything
     secret-shaped — private-range addresses, internal hostnames, key material, credential
     assignments — and fails the build on a match, before anything ships. Its value is that
-    it is not the projection: two mechanisms have to fail together for a secret to reach the
-    public, and neither one's authors can talk the other out of its verdict.
+    it is not the projection, and neither one's authors can talk the other out of its
+    verdict. <strong>That independence is not yet doing any work here.</strong> Because the
+    projection is not wired to this site, only the tripwire stands between an author's
+    mistake and the public: one mechanism has to miss, not two. The two-guard property
+    arrives with the wiring, and this page will say so when it does.
   </p>
 
   <Callout tone="publish" label="Status of this boundary">
