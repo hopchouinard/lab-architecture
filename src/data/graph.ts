@@ -6,11 +6,15 @@
 // the components that realize it. Positions are hand-placed for an intentional
 // three-band layout (describe → operate → publish), left to right.
 //
-// The physical layer is deliberately generic. If the inventory-fed allowlist
-// generator is ever built, it could emit this same shape from inventory.yaml;
-// until then this curated version keeps the explorer fully testable with nothing
-// sensitive. Nodes whose `kind` reads "designed, not built" describe intended
-// mechanisms that do not exist yet — keep that label accurate.
+// The physical layer is deliberately generic — invented aliases, no real
+// hostnames, IPs, or identifiers — and stays hand-curated so the explorer
+// remains fully testable with nothing sensitive. An allowlist projection that
+// could one day drive this layer from inventory.yaml now exists, but it is
+// built inside Describe and is not wired here: this graph still derives from
+// nothing but the hand-authored data below. Two nodes carry a status label
+// rather than a plain description of what they do — allowlist's `kind` reads
+// "built, not wired" and tripwire's reads "enforced on every build" — keep
+// both accurate as those mechanisms' relationship to this site changes.
 
 export type Boundary = "describe" | "operate" | "publish" | "physical";
 
@@ -151,10 +155,10 @@ export const CONCEPT_NODES: GraphNode[] = [
     id: "allowlist",
     label: "Allowlist export",
     boundary: "publish",
-    kind: "designed, not built",
-    summary: "Would let only marked fields cross over.",
+    kind: "built, not wired",
+    summary: "Lets only marked fields cross over. Not connected to this site.",
     detail:
-      "A projection of the inventory in which nothing is published unless explicitly allowed, so new fields stay private by default. It does not exist yet: no inventory field carries a publication marker and no generator emits this projection.",
+      "A projection of the inventory in which nothing is published unless explicitly allowed, so new fields stay private by default. It is built inside Describe and writes a committed artifact there. It is not wired to this site: nothing carries that artifact here.",
     x: 760,
     y: 130,
   },
@@ -162,10 +166,10 @@ export const CONCEPT_NODES: GraphNode[] = [
     id: "tripwire",
     label: "Tripwire",
     boundary: "publish",
-    kind: "designed, not built",
-    summary: "Would refuse to ship anything secret-shaped.",
+    kind: "enforced on every build",
+    summary: "Refuses to ship anything secret-shaped.",
     detail:
-      "An independent scan over build output that fails the build on a match, so two guards would have to fail together for a leak to ship. The site's build runs no such scan today.",
+      "An independent scan over build output that fails the build on a match, so two guards have to fail together for a leak to ship. It runs in this repository's CI and deploy workflows, after the build and before anything is published.",
     x: 760,
     y: 270,
   },
@@ -185,9 +189,9 @@ export const CONCEPT_NODES: GraphNode[] = [
 export const CONCEPT_EDGES: GraphEdge[] = [
   { id: "c-inv-views", source: "inventory", target: "generated-views", label: "generates" },
   { id: "c-inv-coh", source: "inventory", target: "coherence", label: "checked by" },
-  { id: "c-inv-allow", source: "inventory", target: "allowlist", label: "would project" },
+  { id: "c-inv-allow", source: "inventory", target: "allowlist", label: "projects" },
   { id: "c-allow-trip", source: "allowlist", target: "tripwire", label: "would be scanned by" },
-  { id: "c-trip-site", source: "tripwire", target: "site", label: "would ship" },
+  { id: "c-trip-site", source: "tripwire", target: "site", label: "gates" },
   { id: "c-agent-reg", source: "agent", target: "registry", label: "bounded by" },
   { id: "c-reg-pol", source: "registry", target: "policy", label: "within" },
   { id: "c-pol-aud", source: "policy", target: "audit", label: "records" },
